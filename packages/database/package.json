@@ -14,6 +14,8 @@
     "db:seed:standards": "tsx scripts/seed-standards.ts",
     "db:seed:complexity": "tsx scripts/seed-complexity.ts",
     "db:seed:mandays": "tsx scripts/seed-mandays.ts",
+    "db:seed:sectors": "tsx scripts/seed-sectors.ts",
+    "db:seed:all": "tsx scripts/seed-all.ts",
     "db:reset": "prisma migrate reset --force"
   },
   "dependencies": {
