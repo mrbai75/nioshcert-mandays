@@ -12,6 +12,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:standards": "tsx scripts/seed-standards.ts",
+    "db:seed:complexity": "tsx scripts/seed-complexity.ts",
     "db:reset": "prisma migrate reset --force"
   },
   "dependencies": {
