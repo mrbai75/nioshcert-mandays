@@ -1,0 +1,441 @@
+// =============================================================================
+// NIOSHCert Mandays Calculation System - Database Schema
+// =============================================================================
+//
+// Production-Ready Schema
+// - PostgreSQL + JSONB (hybrid)
+// - Versionable standards
+// - Audit trail
+// - Soft delete
+// - Multi-standard (relation table)
+// - Multi-role (users)
+//
+// Rujukan: docs/06-database.md
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// 1. CLIENTS - Company info
+// =============================================================================
+
+model Client {
+  id                String   @id @default(uuid()) @db.Uuid
+  code              String   @unique @db.VarChar(50)
+  name              String   @db.VarChar(255)
+  address           String?  @db.Text
+  legalStatus       String?  @map("legal_status") @db.VarChar(100)
+  orgType           String?  @map("org_type") @db.VarChar(50)
+  isBumiputera      Boolean  @default(false) @map("is_bumiputera")
+
+  // Contact PIC
+  contactName        String? @map("contact_name") @db.VarChar(255)
+  contactDesignation String? @map("contact_designation") @db.VarChar(100)
+  contactPhone       String? @map("contact_phone") @db.VarChar(50)
+  contactEmail       String? @map("contact_email") @db.VarChar(255)
+
+  // Status
+  isActive          Boolean   @default(true) @map("is_active")
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  applications      Application[]
+
+  // Audit
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy         String?   @map("created_by") @db.VarChar(100)
+  updatedBy         String?   @map("updated_by") @db.VarChar(100)
+
+  @@index([name])
+  @@index([contactEmail])
+  @@index([isActive])
+  @@map("clients")
+}
+
+// =============================================================================
+// 2. USERS - Multi-role
+// =============================================================================
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique @db.VarChar(255)
+  name            String    @db.VarChar(255)
+  role            String    @db.VarChar(50)
+  // Roles: PIC, BD, ATD_OFFICER, ATD_MANAGER, SUPER_ADMIN
+  clientId        String?   @map("client_id") @db.Uuid
+  isActive        Boolean   @default(true) @map("is_active")
+
+  // SSO (untuk Fasa 2)
+  microsoftId     String?   @map("microsoft_id") @db.VarChar(255)
+
+  // Audit
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz
+
+  // Relations
+  auditLogs       AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+// =============================================================================
+// 3. APPLICATIONS - Submission
+// =============================================================================
+
+model Application {
+  id                String   @id @default(uuid()) @db.Uuid
+  referenceNo       String   @unique @map("reference_no") @db.VarChar(50)
+
+  clientId          String   @map("client_id") @db.Uuid
+  client            Client   @relation(fields: [clientId], references: [id])
+
+  // Application type
+  applicationType   String   @map("application_type") @db.VarChar(50)
+  // NEW, RECERT, TRANSFER, EXTENSION
+
+  certificationType String   @map("certification_type") @db.VarChar(50)
+  // SINGLE, MULTISITE, MULTI_COMPANY, INTEGRATED
+
+  // FTE summary (query-able)
+  totalFte          Int      @map("total_fte")
+  industryType      String?  @map("industry_type") @db.VarChar(255)
+  cpiScore          Int?     @map("cpi_score")
+
+  // JSONB (dynamic)
+  fteBreakdown      Json?    @map("fte_breakdown")
+  questionnaire     Json?
+  clientSnapshot    Json?    @map("client_snapshot")
+
+  // Status
+  status            String   @default("DRAFT") @db.VarChar(50)
+  // DRAFT, SUBMITTED, UNDER_BD_REVIEW, UNDER_ATD_REVIEW,
+  // UNDER_MANAGER_APPROVAL, APPROVED, REJECTED, CANCELLED
+
+  // Workflow timestamps
+  submittedAt       DateTime? @map("submitted_at") @db.Timestamptz
+  submittedBy       String?   @map("submitted_by") @db.VarChar(100)
+  bdReviewedAt      DateTime? @map("bd_reviewed_at") @db.Timestamptz
+  bdReviewedBy      String?   @map("bd_reviewed_by") @db.VarChar(100)
+  atdReviewedAt     DateTime? @map("atd_reviewed_at") @db.Timestamptz
+  atdReviewedBy     String?   @map("atd_reviewed_by") @db.VarChar(100)
+  approvedAt        DateTime? @map("approved_at") @db.Timestamptz
+  approvedBy        String?   @map("approved_by") @db.VarChar(100)
+  rejectedAt        DateTime? @map("rejected_at") @db.Timestamptz
+  rejectedBy        String?   @map("rejected_by") @db.VarChar(100)
+  rejectionReason   String?   @map("rejection_reason") @db.Text
+
+  // Soft delete
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  applicationStandards ApplicationStandard[]
+  calculations         Calculation[]
+  auditLogs            AuditLog[]
+
+  // Audit
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy         String?   @map("created_by") @db.VarChar(100)
+  updatedBy         String?   @map("updated_by") @db.VarChar(100)
+
+  @@index([clientId])
+  @@index([status])
+  @@index([referenceNo])
+  @@index([applicationType])
+  @@index([createdAt])
+  @@map("applications")
+}
+
+// =============================================================================
+// 4. STANDARDS - Master (versionable)
+// =============================================================================
+
+model Standard {
+  id              String   @id @default(uuid()) @db.Uuid
+  code            String   @db.VarChar(20)
+  version         String   @default("1.0") @db.VarChar(20)
+  name            String   @db.VarChar(255)
+  referenceDoc    String   @map("reference_doc") @db.VarChar(100)
+  effectiveDate   DateTime @map("effective_date") @db.Date
+  isActive        Boolean  @default(true) @map("is_active")
+
+  // Relations
+  complexityLevels     ComplexityLevel[]
+  mandaysTable         MandaysTable[]
+  sectorComplexity     SectorComplexity[]
+  applicationStandards ApplicationStandard[]
+
+  // Audit
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([code, version])
+  @@index([code])
+  @@index([isActive])
+  @@map("standards")
+}
+
+// =============================================================================
+// 5. COMPLEXITY LEVELS
+// =============================================================================
+
+model ComplexityLevel {
+  id              String   @id @default(uuid()) @db.Uuid
+  standardId      String   @map("standard_id") @db.Uuid
+  standard        Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+
+  levelCode       String   @map("level_code") @db.VarChar(20)
+  // HIGH, MEDIUM, LOW, LIMITED
+
+  label           String   @db.VarChar(100)
+  description     String?  @db.Text
+
+  // Relations
+  mandaysTable    MandaysTable[]
+  sectorComplexity SectorComplexity[]
+
+  // Audit
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([standardId, levelCode])
+  @@map("complexity_levels")
+}
+
+// =============================================================================
+// 6. MANDAYS TABLE - Jadual mandays (versionable)
+// =============================================================================
+
+model MandaysTable {
+  id              String   @id @default(uuid()) @db.Uuid
+  standardId      String   @map("standard_id") @db.Uuid
+  standard        Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+
+  complexityId    String?  @map("complexity_id") @db.Uuid
+  complexity      ComplexityLevel? @relation(fields: [complexityId], references: [id], onDelete: SetNull)
+
+  fteMin          Int      @map("fte_min")
+  fteMax          Int?     @map("fte_max")
+  auditDays       Decimal  @map("audit_days") @db.Decimal(5, 2)
+
+  // Versioning
+  version         String   @default("1.0") @db.VarChar(20)
+  effectiveDate   DateTime @map("effective_date") @db.Date
+  isActive        Boolean  @default(true) @map("is_active")
+
+  // Audit
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([standardId, complexityId, fteMin, fteMax])
+  @@index([standardId, version])
+  @@map("mandays_table")
+}
+
+// =============================================================================
+// 7. SECTOR COMPLEXITY - Sector mapping
+// =============================================================================
+
+model SectorComplexity {
+  id              String   @id @default(uuid()) @db.Uuid
+  standardId      String   @map("standard_id") @db.Uuid
+  standard        Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+
+  complexityId    String   @map("complexity_id") @db.Uuid
+  complexity      ComplexityLevel @relation(fields: [complexityId], references: [id])
+
+  sectorName      String   @map("sector_name") @db.VarChar(255)
+  sectorCode      String?  @map("sector_code") @db.VarChar(20)
+  keywords        String[]
+  notes           String?  @db.Text
+
+  // Versioning
+  version         String   @default("1.0") @db.VarChar(20)
+  isActive        Boolean  @default(true) @map("is_active")
+
+  // Audit
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([standardId, sectorName])
+  @@map("sector_complexity")
+}
+
+// =============================================================================
+// 8. APPLICATION STANDARDS - Relation (multi-standard)
+// =============================================================================
+
+model ApplicationStandard {
+  id                String   @id @default(uuid()) @db.Uuid
+
+  applicationId     String   @map("application_id") @db.Uuid
+  application       Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  standardId        String   @map("standard_id") @db.Uuid
+  standard          Standard @relation(fields: [standardId], references: [id])
+
+  // Complexity (per standard)
+  complexityLevel   String?  @map("complexity_level") @db.VarChar(20)
+  complexitySource  String?  @map("complexity_source") @db.VarChar(50)
+  // AUTO, OVERRIDE, MANUAL
+
+  complexityReason  String?  @map("complexity_reason") @db.Text
+
+  // Integrated flag
+  isIntegrated      Boolean  @default(false) @map("is_integrated")
+
+  // Status per standard
+  status            String   @default("PENDING") @db.VarChar(50)
+
+  // Relations
+  calculations      Calculation[]
+
+  // Audit
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([applicationId, standardId])
+  @@index([applicationId])
+  @@index([standardId])
+  @@map("application_standards")
+}
+
+// =============================================================================
+// 9. CALCULATIONS - Hasil kiraan per standard
+// =============================================================================
+
+model Calculation {
+  id                    String   @id @default(uuid()) @db.Uuid
+  referenceNo           String   @unique @map("reference_no") @db.VarChar(50)
+
+  applicationId         String   @map("application_id") @db.Uuid
+  application           Application @relation(fields: [applicationId], references: [id])
+
+  applicationStandardId String   @map("application_standard_id") @db.Uuid
+  applicationStandard   ApplicationStandard @relation(fields: [applicationStandardId], references: [id])
+
+  // Input
+  standardCode          String   @map("standard_code") @db.VarChar(20)
+  fte                   Int
+  complexity            String?  @db.VarChar(20)
+
+  // Default calculation
+  defaultBaseMd         Decimal? @map("default_base_md") @db.Decimal(6, 2)
+  defaultEffectiveMd    Decimal? @map("default_effective_md") @db.Decimal(6, 2)
+  defaultOutput         Json?    @map("default_output")
+  defaultTrace          Json?    @map("default_trace")
+
+  // Override (ATD Officer)
+  isOverridden          Boolean   @default(false) @map("is_overridden")
+  overrideComplexity    String?   @map("override_complexity") @db.VarChar(20)
+  overrideBaseMd        Decimal?  @map("override_base_md") @db.Decimal(6, 2)
+  overrideEffectiveMd   Decimal?  @map("override_effective_md") @db.Decimal(6, 2)
+  overrideJustification String?   @map("override_justification") @db.Text
+  overrideReference     Json?     @map("override_reference")
+  overrideBy            String?   @map("override_by") @db.VarChar(100)
+  overrideAt            DateTime? @map("override_at") @db.Timestamptz
+
+  // Manager amendment
+  isAmended              Boolean   @default(false) @map("is_amended")
+  amendedBy              String?   @map("amended_by") @db.VarChar(100)
+  amendedAt              DateTime? @map("amended_at") @db.Timestamptz
+  amendmentJustification String?   @map("amendment_justification") @db.Text
+
+  // Final output
+  finalBaseMd           Decimal? @map("final_base_md") @db.Decimal(6, 2)
+  finalEffectiveMd      Decimal? @map("final_effective_md") @db.Decimal(6, 2)
+  finalStage1Md         Decimal? @map("final_stage1_md") @db.Decimal(6, 2)
+  finalStage2Md         Decimal? @map("final_stage2_md") @db.Decimal(6, 2)
+  finalSurveillanceMd   Decimal? @map("final_surveillance_md") @db.Decimal(6, 2)
+  finalRecertMd         Decimal? @map("final_recert_md") @db.Decimal(6, 2)
+  finalOutput           Json?    @map("final_output")
+
+  // Approval
+  approvedBy            String?   @map("approved_by") @db.VarChar(100)
+  approvedAt            DateTime? @map("approved_at") @db.Timestamptz
+
+  // Audit
+  auditTrail            Json?    @map("audit_trail")
+
+  // PDF
+  pdfUrl                String?   @map("pdf_url") @db.Text
+  pdfGeneratedAt        DateTime? @map("pdf_generated_at") @db.Timestamptz
+
+  // Versioning
+  version               Int      @default(1)
+  parentCalculationId   String?  @map("parent_calculation_id") @db.Uuid
+
+  // Soft delete
+  deletedAt             DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  auditLogs             AuditLog[]
+
+  // Audit
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy             String?  @map("created_by") @db.VarChar(100)
+  updatedBy             String?  @map("updated_by") @db.VarChar(100)
+
+  @@index([applicationId])
+  @@index([applicationStandardId])
+  @@index([standardCode])
+  @@index([approvedAt])
+  @@map("calculations")
+}
+
+// =============================================================================
+// 10. AUDIT LOGS - Detailed audit trail
+// =============================================================================
+
+model AuditLog {
+  id              String   @id @default(uuid()) @db.Uuid
+
+  // Apa yang berlaku
+  action          String   @db.VarChar(100)
+  // CREATE, UPDATE, DELETE, APPROVE, REJECT, OVERRIDE, LOGIN, LOGOUT
+
+  entityType      String   @map("entity_type") @db.VarChar(50)
+  // Application, Calculation, Client, User
+
+  entityId        String   @map("entity_id") @db.Uuid
+
+  // Siapa
+  userId          String?  @map("user_id") @db.Uuid
+  user            User?    @relation(fields: [userId], references: [id])
+  userEmail       String?  @map("user_email") @db.VarChar(255)
+  userRole        String?  @map("user_role") @db.VarChar(50)
+
+  // Bila
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Detail (JSONB)
+  beforeState     Json?    @map("before_state")
+  afterState      Json?    @map("after_state")
+  changes         Json?
+  metadata        Json?
+  notes           String?  @db.Text
+
+  // Relations
+  applicationId   String?  @map("application_id") @db.Uuid
+  application     Application? @relation(fields: [applicationId], references: [id])
+
+  calculationId   String?  @map("calculation_id") @db.Uuid
+  calculation     Calculation? @relation(fields: [calculationId], references: [id])
+
+  // Indexes
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
