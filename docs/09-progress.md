@@ -2,7 +2,7 @@
 
 Status terkini projek **Sambung NIOSHCert Mandays Calculation System**.
 
-**Kemas kini terakhir:** 16 September 2026
+**Kemas kini terakhir:** 17 September 2026
 
 ---
 
@@ -14,9 +14,9 @@ Status terkini projek **Sambung NIOSHCert Mandays Calculation System**.
 | 2 | Formula Engine | ✅ Siap | 4/4 test PASS |
 | 3 | Database | ✅ Siap | 10 table, migration, client |
 | 4 | Docs (01–13) | ✅ Siap | Semua MD fail |
-| 5 | `packages/shared` | ✅ Siap | 53/53 test PASS |
-| 6 | Seed data | ⏳ Belum | `scripts/seed-*` |
-| 7 | Backend API (NestJS) | ⏳ Belum | — |
+| 5 | `packages/shared` | ✅ Siap | 82/82 test PASS |
+| 6 | Seed data | ✅ Siap | 436 rows (5 standards, 13 complexity, 275 mandays, 143 sectors) |
+| 7 | Backend API (NestJS) | ⏳ Seterusnya | — |
 | 8 | Frontend UI (React) | ⏳ Belum | — |
 | 9 | PDF Export (Puppeteer) | ⏳ Belum | — |
 
@@ -27,7 +27,7 @@ Status terkini projek **Sambung NIOSHCert Mandays Calculation System**.
 - Environment: WSL2, Docker, Node, pnpm, Git, VS Code
 - DeepSeek API + Cline
 - PostgreSQL 16 (Docker running)
-- Git commit docs 01–13
+- Git remote: `https://github.com/mrbai75/nioshcert-mandays.git`
 
 ---
 
@@ -57,16 +57,16 @@ Status terkini projek **Sambung NIOSHCert Mandays Calculation System**.
 - Docker Postgres running — siap
 
 **10 Table:**
-1. `Standard`
-2. `MandaysRule`
-3. `Questionnaire`
-4. `Question`
-5. `Answer`
-6. `Calculation`
-7. `CalculationResult`
-8. `AuditLog`
-9. `User`
-10. `Organization`
+1. `Client`
+2. `User`
+3. `Application`
+4. `Standard`
+5. `ComplexityLevel`
+6. `MandaysTable`
+7. `SectorComplexity`
+8. `ApplicationStandard`
+9. `Calculation`
+10. `AuditLog`
 
 ---
 
@@ -84,7 +84,7 @@ Status terkini projek **Sambung NIOSHCert Mandays Calculation System**.
 | 06 | `06-database.md` (v2.0) | ✅ |
 | 07 | `07-deployment.md` | ✅ |
 | 08 | `08-references.md` | ✅ |
-| 09 | `09-progress.md` (v3.0) | ✅ |
+| 09 | `09-progress.md` (v4.0) | ✅ |
 | 10 | `10-formula-engine-progress.md` (v2.0) | ✅ |
 | 11 | `11-nioshcert-questions.md` | ✅ |
 | 12 | `12-questionnaire-analysis.md` | ✅ |
@@ -92,10 +92,10 @@ Status terkini projek **Sambung NIOSHCert Mandays Calculation System**.
 
 ---
 
-## 5. `packages/shared` ✅ (BARU)
+## 5. `packages/shared` ✅
 
 **Lokasi:** `packages/shared/`
-**Commit:** `578b856`
+**Nama package:** `@nioshcert/shared`
 
 ### Struktur
 packages/shared/
@@ -103,7 +103,7 @@ packages/shared/
 │ ├── types/
 │ │ ├── standard.ts ✅
 │ │ ├── complexity.ts ✅
-│ │ ├── calculation.ts ✅
+│ │ ├── calculation.ts ✅ (support IMS)
 │ │ ├── questionnaire.ts ✅
 │ │ ├── api.ts ✅
 │ │ └── index.ts ✅
@@ -119,110 +119,148 @@ packages/shared/
 │ │ └── index.ts ✅
 │ └── index.ts ✅
 ├── tests/
-│ └── utils.test.ts ✅
+│ └── utils.test.ts ✅ (82 tests)
 ├── package.json ✅
 ├── tsconfig.json ✅
 └── vitest.config.ts ✅
 
 text
 
-### Kandungan
-
-- **Types:** 30+ types (StandardCode, ComplexityLevel, CalculationInput/Result, Questionnaire, API DTO)
-- **Constants:** SECTORS (per standard), STANDARDS (5 metadata), LIMITS (MAX_FTE, CPI ranges, ratios)
-- **Utils:** Rounding (capCeil), Validation (validateCalculationInput), Format (formatMandays, formatDate)
-- **Type guards:** `isStandardCode`, `isComplexityLevel`, `isApplicationType`, `isQuestionType`
-
 ### Verify
 
 | Check | Result |
 |---|---|
-| `pnpm install` | ✅ 52 packages |
 | `pnpm typecheck` | ✅ 0 error |
-| `pnpm test` | ✅ **53/53 PASS** |
+| `pnpm test` | ✅ **82/82 PASS** |
 
-### Fail Root Baru
+### IMS Support ✅
 
-- `tsconfig.base.json` — base config untuk semua package
-
----
-
-## 6. Seed Data ⏳ (Seterusnya)
-
-**Lokasi:** `scripts/`
-
-- `seed-standards.ts` — seed 5 standard ke DB
-- `seed-mandays.ts` — seed table mandays (OSHMS/QMS/EMS)
-- `reset-db.ts` — reset + migrate + seed
+Types, validation, format, dan DB schema sedia untuk IMS (integrated management system). Formula IMS (IAF MD 11) belum implement — akan datang.
 
 ---
 
-## 7. Backend API ⏳
+## 6. Seed Data ✅ (BARU)
 
-**Lokasi:** `packages/backend/`
+**Lokasi:** `packages/database/scripts/`
 
-- NestJS
-- REST API
-- Endpoint: `/api/calculations`, `/api/standards`, `/api/questionnaire`, dll
+### Seed Scripts
 
----
+| # | Script | Rows | Sumber |
+|---|---|---|---|
+| 1 | `seed-standards.ts` | 5 | Manual |
+| 2 | `seed-complexity.ts` | 13 | IAF MD 5 + CAP 03-01 |
+| 3 | `seed-mandays.ts` | 275 | CAP 03-01 Table 1.1/2.1/3.1 |
+| 4 | `seed-sectors.ts` | 143 | CAP 03-01 Table 1.2/3.2/3.3 |
+| | **Total** | **436** | |
 
-## 8. Frontend UI ⏳
+### Breakdown
 
-**Lokasi:** `packages/frontend/`
+**Standards (5):**
+OSHMS, QMS, EMS, ABMS, ISMS
 
-- React + Vite
-- Dynamic questionnaire
-- Result page
-- History
+**Complexity Levels (13):**
+- OSHMS: 3 (H/M/L)
+- QMS: 3 (H/M/L)
+- EMS: 4 (H/M/L/LIM)
+- ABMS: 3 (H/M/L)
+- ISMS: 0 (skip — tiada complexity split)
 
----
+**Mandays Table (275):**
+- OSHMS: 69 (23 bands × 3)
+- QMS: 23 (23 bands × 1)
+- EMS: 92 (23 bands × 4)
+- ABMS: 69 (duplicate EMS, buang LIMITED)
+- ISMS: 22 (CAP Table 9, 22 bands)
 
-## 9. PDF Export ⏳
+**Sectors (143):**
+- OSHMS: 67
+- EMS: 51
+- ABMS: 25
+- QMS: skip (risk category)
+- ISMS: skip (business + IT complexity)
 
-**Lokasi:** `packages/pdf-export/`
+### Seed Commands
 
-- Puppeteer
-- Template PDF untuk laporan mandays
+```bash
+pnpm --filter @nioshcert/database db:seed:all          # semua
+pnpm --filter @nioshcert/database db:seed:standards    # 5 standard
+pnpm --filter @nioshcert/database db:seed:complexity   # 13 levels
+pnpm --filter @nioshcert/database db:seed:mandays      # 275 rows
+pnpm --filter @nioshcert/database db:seed:sectors      # 143 sectors
+Semua idempotent — boleh run berulang.
 
----
+7. Backend API ⏳ (Seterusnya)
+Lokasi: packages/backend/
 
-## Keputusan Penting
+NestJS
 
-1. **Rounding:** Kekal CAP (ceil) dulu. Clarify NIOSHCert kemudian.
-2. **Database:** PostgreSQL + JSONB (hybrid). 10 table. Production-ready.
-3. **Questionnaire:** Dynamic ikut standard. Auto-detect complexity + override.
-4. **CAP vs IAF:** CAP perlu comply IAF. Kekal CAP dulu.
-5. **FTE > 10700:** Case-by-case, ATD manual input.
-6. **ABMS Complexity:** Auto + override. CPI + sector + regulatory.
-7. **ComplexityLevel:** 4 tahap (`LIMITED`, `LOW`, `MEDIUM`, `HIGH`) — selaras IAF MD 5.
-8. **StandardCode:** 5 standard (`OSHMS`, `QMS`, `EMS`, `ABMS`, `ISMS`) — ISMS pending (ISO/IEC 27006).
-9. **Monorepo:** pnpm workspaces + `tsconfig.base.json` di root.
+REST API
 
----
+Endpoint: /api/calculations, /api/standards, /api/questionnaire, dll
 
-## Aturan Bahasa
+8. Frontend UI ⏳
+Lokasi: packages/frontend/
 
-| Component | Language |
-|---|---|
-| Code (variable, function) | English |
-| Comment | Bahasa Melayu |
-| Error messages | English |
-| Test names | English |
-| UI | English |
-| Docs | Bahasa Melayu |
+React + Vite
 
----
+Dynamic questionnaire
 
-## Next Step
+Result page
 
-Sambung **seed data** (`scripts/seed-standards.ts`), kemudian backend API, frontend UI.
+History
 
----
+9. PDF Export ⏳
+Lokasi: packages/pdf-export/
 
-## Rujukan
+Puppeteer
 
-- `docs/13-project-structure.md` — struktur folder
-- `docs/03-formula-engine.md` — formula penuh
-- `docs/06-database.md` — skema DB
-- `docs/10-formula-engine-progress.md` — detail formula engine
+Template PDF untuk laporan mandays
+
+Keputusan Penting
+Rounding: Kekal CAP (ceil) dulu. Clarify NIOSHCert kemudian.
+
+Database: PostgreSQL + JSONB (hybrid). 10 table. Production-ready.
+
+Questionnaire: Dynamic ikut standard. Auto-detect complexity + override.
+
+CAP vs IAF: CAP perlu comply IAF. Kekal CAP dulu.
+
+FTE > 10700: Case-by-case, ATD manual input.
+
+ABMS Complexity: Auto + override. CPI + sector + regulatory.
+
+ComplexityLevel: 4 tahap (LIMITED, LOW, MEDIUM, HIGH) — selaras IAF MD 5.
+
+StandardCode: 5 standard (OSHMS, QMS, EMS, ABMS, ISMS) — ISMS pending (ISO/IEC 27006).
+
+Monorepo: pnpm workspaces + tsconfig.base.json di root.
+
+Package naming: @nioshcert/* (konsisten).
+
+IMS Support: Types/validation/format/DB sedia. Formula (IAF MD 11) pending.
+
+ABMS: Guna data EMS (proxy) — CAP 03-01.
+
+ISMS: Tiada sector + complexity split. Guna Table 9 + adjustment (business + IT complexity) dalam formula engine.
+
+Aturan Bahasa
+Component	Language
+Code (variable, function)	English
+Comment	Bahasa Melayu
+Error messages	English
+Test names	English
+UI	English
+Docs	Bahasa Melayu
+Next Step
+Sambung Backend API (NestJS) — packages/backend/.
+
+Rujukan
+docs/13-project-structure.md — struktur folder
+
+docs/03-formula-engine.md — formula penuh
+
+docs/06-database.md — skema DB
+
+docs/10-formula-engine-progress.md — detail formula engine
+
+GitHub: https://github.com/mrbai75/nioshcert-mandays
