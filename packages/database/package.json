@@ -13,10 +13,12 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:standards": "tsx scripts/seed-standards.ts",
     "db:seed:complexity": "tsx scripts/seed-complexity.ts",
+    "db:seed:mandays": "tsx scripts/seed-mandays.ts",
     "db:reset": "prisma migrate reset --force"
   },
   "dependencies": {
-    "@prisma/client": "^5.20.0"
+    "@prisma/client": "^5.20.0",
+    "@nioshcert/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
