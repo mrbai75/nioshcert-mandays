@@ -19,7 +19,9 @@ import {
   validateSites,
   validateCpiScore,
   validateStandard,
+  validateStandards,
   validateComplexity,
+  validateComplexities,
   validateApplicationType,
   validateAbmsInput,
   validateCalculationInput,
@@ -28,8 +30,14 @@ import {
   formatMandays,
   formatNumber,
   formatMandaysRange,
+  formatStandardName,
+  formatStandardWithVersion,
+  formatStandardsList,
+  formatStandardsWithNames,
+  formatIntegrationLabel,
   formatComplexity,
   formatComplexityFull,
+  formatComplexitiesMap,
   formatApplicationType,
   formatDate,
   formatFte,
@@ -201,6 +209,40 @@ describe('validation', () => {
     });
   });
 
+  describe('validateStandards', () => {
+    it('accepts single standard array', () => {
+      expect(validateStandards(['QMS']).valid).toBe(true);
+    });
+
+    it('accepts multiple standards (IMS)', () => {
+      expect(validateStandards(['QMS', 'ABMS']).valid).toBe(true);
+      expect(validateStandards(['QMS', 'ABMS', 'EMS']).valid).toBe(true);
+    });
+
+    it('rejects non-array', () => {
+      expect(validateStandards('QMS').valid).toBe(false);
+      expect(validateStandards(undefined).valid).toBe(false);
+    });
+
+    it('rejects empty array', () => {
+      const result = validateStandards([]);
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.code).toBe('EMPTY');
+    });
+
+    it('rejects invalid standard in array', () => {
+      const result = validateStandards(['QMS', 'INVALID']);
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.code).toBe('INVALID_STANDARD');
+    });
+
+    it('rejects duplicate standards', () => {
+      const result = validateStandards(['QMS', 'QMS']);
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.code).toBe('DUPLICATE');
+    });
+  });
+
   describe('validateComplexity', () => {
     it('accepts valid levels', () => {
       expect(validateComplexity('HIGH').valid).toBe(true);
@@ -215,6 +257,32 @@ describe('validation', () => {
 
     it('rejects invalid level', () => {
       expect(validateComplexity('INVALID').valid).toBe(false);
+    });
+  });
+
+  describe('validateComplexities', () => {
+    it('accepts undefined (optional)', () => {
+      expect(validateComplexities(undefined).valid).toBe(true);
+    });
+
+    it('accepts valid map', () => {
+      expect(validateComplexities({ QMS: 'LOW', ABMS: 'HIGH' }).valid).toBe(true);
+    });
+
+    it('accepts empty map', () => {
+      expect(validateComplexities({}).valid).toBe(true);
+    });
+
+    it('rejects invalid standard key', () => {
+      const result = validateComplexities({ INVALID: 'LOW' });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.code).toBe('INVALID_STANDARD');
+    });
+
+    it('rejects invalid complexity value', () => {
+      const result = validateComplexities({ QMS: 'INVALID' });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.code).toBe('INVALID_COMPLEXITY');
     });
   });
 
@@ -254,9 +322,18 @@ describe('validation', () => {
   });
 
   describe('validateCalculationInput', () => {
-    it('accepts valid input', () => {
+    it('accepts valid single standard input', () => {
       const result = validateCalculationInput({
-        standard: 'OSHMS',
+        standards: ['OSHMS'],
+        fte: 100,
+        applicationType: 'NEW',
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    it('accepts valid IMS input', () => {
+      const result = validateCalculationInput({
+        standards: ['QMS', 'EMS'],
         fte: 100,
         applicationType: 'NEW',
       });
@@ -265,16 +342,44 @@ describe('validation', () => {
 
     it('rejects input with invalid FTE', () => {
       const result = validateCalculationInput({
-        standard: 'OSHMS',
+        standards: ['OSHMS'],
         fte: -1,
         applicationType: 'NEW',
       });
       expect(result.valid).toBe(false);
     });
 
-    it('requires ABMS input when standard is ABMS', () => {
+    it('requires ABMS input when standards include ABMS', () => {
       const result = validateCalculationInput({
-        standard: 'ABMS',
+        standards: ['ABMS'],
+        fte: 100,
+        applicationType: 'NEW',
+      });
+      expect(result.valid).toBe(false);
+    });
+
+    it('requires ABMS input for IMS with ABMS', () => {
+      const result = validateCalculationInput({
+        standards: ['QMS', 'ABMS'],
+        fte: 100,
+        applicationType: 'NEW',
+      });
+      expect(result.valid).toBe(false);
+    });
+
+    it('accepts IMS with ABMS + abmsInput', () => {
+      const result = validateCalculationInput({
+        standards: ['QMS', 'ABMS'],
+        fte: 100,
+        applicationType: 'NEW',
+        abmsInput: { cpiScore: 25, hasRegulatoryAction: false },
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    it('rejects empty standards array', () => {
+      const result = validateCalculationInput({
+        standards: [],
         fte: 100,
         applicationType: 'NEW',
       });
@@ -334,6 +439,75 @@ describe('format', () => {
     });
   });
 
+  describe('formatStandardName', () => {
+    it('returns full name from metadata', () => {
+      expect(formatStandardName('OSHMS')).toBe(
+        'Occupational Health and Safety Management System',
+      );
+    });
+  });
+
+  describe('formatStandardWithVersion', () => {
+    it('appends version in parentheses', () => {
+      expect(formatStandardWithVersion('OSHMS')).toBe('OSHMS (ISO 45001:2018)');
+    });
+  });
+
+  describe('formatStandardsList', () => {
+    it('formats single', () => {
+      expect(formatStandardsList(['QMS'])).toBe('QMS');
+    });
+
+    it('formats IMS with +', () => {
+      expect(formatStandardsList(['QMS', 'ABMS'])).toBe('QMS + ABMS');
+    });
+
+    it('formats 3+ standards', () => {
+      expect(formatStandardsList(['QMS', 'ABMS', 'EMS'])).toBe('QMS + ABMS + EMS');
+    });
+
+    it('handles empty', () => {
+      expect(formatStandardsList([])).toBe('N/A');
+    });
+  });
+
+  describe('formatStandardsWithNames', () => {
+    it('formats single with name', () => {
+      expect(formatStandardsWithNames(['QMS'])).toBe(
+        'QMS (Quality Management System)',
+      );
+    });
+
+    it('formats IMS with "Integrated"', () => {
+      expect(formatStandardsWithNames(['QMS', 'ABMS'])).toBe(
+        'QMS + ABMS (Integrated)',
+      );
+    });
+
+    it('handles empty', () => {
+      expect(formatStandardsWithNames([])).toBe('N/A');
+    });
+  });
+
+  describe('formatIntegrationLabel', () => {
+    it('returns "Single" for one standard', () => {
+      expect(formatIntegrationLabel(['QMS'])).toBe('Single');
+    });
+
+    it('returns "Integrated (N standards)" for multiple', () => {
+      expect(formatIntegrationLabel(['QMS', 'ABMS'])).toBe(
+        'Integrated (2 standards)',
+      );
+      expect(formatIntegrationLabel(['QMS', 'ABMS', 'EMS'])).toBe(
+        'Integrated (3 standards)',
+      );
+    });
+
+    it('handles empty', () => {
+      expect(formatIntegrationLabel([])).toBe('N/A');
+    });
+  });
+
   describe('formatComplexity', () => {
     it('title-cases levels', () => {
       expect(formatComplexity('HIGH')).toBe('High');
@@ -344,6 +518,18 @@ describe('format', () => {
   describe('formatComplexityFull', () => {
     it('adds "Complexity" suffix', () => {
       expect(formatComplexityFull('HIGH')).toBe('High Complexity');
+    });
+  });
+
+  describe('formatComplexitiesMap', () => {
+    it('formats map', () => {
+      expect(formatComplexitiesMap({ QMS: 'LOW', ABMS: 'HIGH' })).toBe(
+        'QMS: Low, ABMS: High',
+      );
+    });
+
+    it('handles empty map', () => {
+      expect(formatComplexitiesMap({})).toBe('N/A');
     });
   });
 

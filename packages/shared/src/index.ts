@@ -1,8 +1,8 @@
 /**
- * Public API untuk @sambung/shared.
+ * Public API untuk @nioshcert/shared.
  *
  * Guna:
- *   import { StandardCode, capCeil, STANDARDS } from '@sambung/shared';
+ *   import { StandardCode, capCeil, STANDARDS } from '@nioshcert/shared';
  *
  * Semua types, constants, dan utils di-export dari sini.
  * Package lain TIDAK sepatutnya import dari sub-path (cth: '/types/standard.js').
@@ -144,7 +144,9 @@ export {
   validateSites,
   validateCpiScore,
   validateStandard,
+  validateStandards,
   validateComplexity,
+  validateComplexities,
   validateApplicationType,
   validateAbmsInput,
   validateCalculationInput,
@@ -157,8 +159,12 @@ export {
   formatStandardName,
   formatStandardWithVersion,
   formatStandardShort,
+  formatStandardsList,
+  formatStandardsWithNames,
+  formatIntegrationLabel,
   formatComplexity,
   formatComplexityFull,
+  formatComplexitiesMap,
   formatApplicationType,
   formatDate,
   formatDateTime,

@@ -2,6 +2,10 @@
  * Types berkaitan Calculation (input & output).
  * Selaras dengan formula-engine/src/types.ts.
  * Rujuk docs/03-formula-engine.md & docs/05-example-case.md.
+ *
+ * Nota IMS:
+ * - `standards` ialah array — support 1 atau lebih standard (integrated).
+ * - IMS (2+ standard) formula masih placeholder — tunggu IAF MD 11.
  */
 
 import type { StandardCode } from './standard.js';
@@ -56,10 +60,20 @@ export interface AbmsInput {
 /**
  * Input untuk pengiraan mandays.
  * Ini yang backend terima dari frontend.
+ *
+ * Nota:
+ * - `standards` ialah array — boleh 1 (single) atau lebih (integrated).
+ * - Kalau `standards.length > 1` → IMS (integrated).
+ * - `complexities` ialah map per standard (optional).
+ * - `abmsInput` WAJIB kalau `standards` termasuk 'ABMS'.
  */
 export interface CalculationInput {
-  /** Standard yang dipilih */
-  readonly standard: StandardCode;
+  /**
+   * Standard yang dipilih.
+   * - 1 elemen  → single standard
+   * - 2+ elemen → integrated (IMS)
+   */
+  readonly standards: readonly StandardCode[];
 
   /** Bilangan pekerja (FTE) */
   readonly fte: number;
@@ -67,16 +81,25 @@ export interface CalculationInput {
   /** Bilangan site (optional, default: 1) */
   readonly sites?: number;
 
-  /** Ada integrasi dengan standard lain? */
+  /**
+   * Integrated flag.
+   * Auto `true` kalau `standards.length > 1` (tidak wajib diisi manual).
+   */
   readonly isIntegrated?: boolean;
 
   /** Jenis permohonan */
   readonly applicationType: ApplicationType;
 
-  /** Complexity level (optional — kalau tak ada, auto-detect) */
-  readonly complexity?: ComplexityLevel;
+  /**
+   * Complexity per standard (optional).
+   * Kalau tak ada, auto-detect atau default.
+   * Contoh: { QMS: 'LOW', ABMS: 'HIGH' }
+   */
+  readonly complexities?: Readonly<Partial<Record<StandardCode, ComplexityLevel>>>;
 
-  /** Input khas ABMS (optional — hanya bila standard = ABMS) */
+  /**
+   * Input khas ABMS (WAJIB kalau standards termasuk 'ABMS').
+   */
   readonly abmsInput?: AbmsInput;
 }
 
@@ -90,7 +113,7 @@ export interface CalculationInput {
  */
 export interface TraceStep {
   /** Tier pengiraan */
-  readonly tier: 'TIER_1' | 'TIER_2' | 'TIER_3' | 'STAGE_SPLIT';
+  readonly tier: 'TIER_1' | 'TIER_2' | 'TIER_3' | 'STAGE_SPLIT' | 'IMS';
 
   /** Penerangan langkah */
   readonly description: string;
@@ -109,17 +132,20 @@ export interface TraceStep {
  * Metadata hasil pengiraan.
  */
 export interface CalculationMeta {
-  /** Standard yang digunakan */
-  readonly standard: StandardCode;
+  /** Standard yang digunakan (array — support IMS) */
+  readonly standards: readonly StandardCode[];
 
-  /** Nama penuh standard */
-  readonly standardName: string;
+  /** Nama penuh standard (array, selari dengan `standards`) */
+  readonly standardNames: readonly string[];
 
   /** FTE yang digunakan */
   readonly fte: number;
 
-  /** Complexity level (optional) */
-  readonly complexity?: ComplexityLevel;
+  /** Integrated? */
+  readonly isIntegrated: boolean;
+
+  /** Complexity per standard (optional) */
+  readonly complexities?: Readonly<Partial<Record<StandardCode, ComplexityLevel>>>;
 
   /** Jenis permohonan */
   readonly applicationType: ApplicationType;
@@ -127,8 +153,11 @@ export interface CalculationMeta {
   /** Tarikh & masa pengiraan (ISO 8601) */
   readonly calculatedAt: string;
 
-  /** Rujukan dokumen, cth: 'IAF MD 5:2019' */
+  /** Rujukan dokumen, cth: 'IAF MD 5:2023' */
   readonly reference: string;
+
+  /** Nota tambahan (cth: "IMS formula pending") */
+  readonly note?: string;
 }
 
 /**

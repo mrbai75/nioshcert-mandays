@@ -164,7 +164,7 @@ export function validateCpiScore(cpi: unknown): ValidationResult {
 }
 
 /**
- * Sahkan standard code.
+ * Sahkan standard code (single).
  */
 export function validateStandard(value: unknown): ValidationResult {
   const errors: ValidationError[] = [];
@@ -181,7 +181,63 @@ export function validateStandard(value: unknown): ValidationResult {
 }
 
 /**
- * Sahkan complexity level.
+ * Sahkan array standard codes (untuk IMS).
+ *
+ * Rules:
+ * - Mesti array
+ * - Tak boleh kosong
+ * - Setiap elemen mesti StandardCode sah
+ * - Tak boleh duplicate
+ */
+export function validateStandards(value: unknown): ValidationResult {
+  const errors: ValidationError[] = [];
+
+  if (!Array.isArray(value)) {
+    errors.push({
+      field: 'standards',
+      code: 'INVALID_TYPE',
+      message: 'Standards must be an array.',
+    });
+    return { valid: false, errors };
+  }
+
+  if (value.length === 0) {
+    errors.push({
+      field: 'standards',
+      code: 'EMPTY',
+      message: 'Standards must contain at least one standard.',
+    });
+    return { valid: false, errors };
+  }
+
+  const seen = new Set<string>();
+  for (let i = 0; i < value.length; i++) {
+    const code = value[i];
+
+    if (!isStandardCode(code)) {
+      errors.push({
+        field: `standards[${i}]`,
+        code: 'INVALID_STANDARD',
+        message: `Standards[${i}] must be one of: ${STANDARD_CODES.join(', ')}.`,
+      });
+      continue;
+    }
+
+    if (seen.has(code)) {
+      errors.push({
+        field: `standards[${i}]`,
+        code: 'DUPLICATE',
+        message: `Duplicate standard: ${code}.`,
+      });
+    }
+    seen.add(code);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Sahkan complexity level (single).
  */
 export function validateComplexity(value: unknown): ValidationResult {
   const errors: ValidationError[] = [];
@@ -196,6 +252,49 @@ export function validateComplexity(value: unknown): ValidationResult {
       code: 'INVALID_COMPLEXITY',
       message: `Complexity must be one of: ${COMPLEXITY_LEVELS.join(', ')}.`,
     });
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Sahkan complexities map (per standard).
+ */
+export function validateComplexities(value: unknown): ValidationResult {
+  const errors: ValidationError[] = [];
+
+  if (value === undefined || value === null) {
+    return { valid: true, errors };
+  }
+
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    errors.push({
+      field: 'complexities',
+      code: 'INVALID_TYPE',
+      message: 'Complexities must be an object mapping standard codes to levels.',
+    });
+    return { valid: false, errors };
+  }
+
+  const map = value as Record<string, unknown>;
+
+  for (const [key, level] of Object.entries(map)) {
+    if (!isStandardCode(key)) {
+      errors.push({
+        field: `complexities.${key}`,
+        code: 'INVALID_STANDARD',
+        message: `Complexities key must be a valid standard code, got: ${key}.`,
+      });
+      continue;
+    }
+
+    if (!isComplexityLevel(level)) {
+      errors.push({
+        field: `complexities.${key}`,
+        code: 'INVALID_COMPLEXITY',
+        message: `Complexities.${key} must be one of: ${COMPLEXITY_LEVELS.join(', ')}.`,
+      });
+    }
   }
 
   return { valid: errors.length === 0, errors };
@@ -262,6 +361,11 @@ export function validateAbmsInput(abms: unknown): ValidationResult {
 /**
  * Sahkan `CalculationInput` penuh.
  * Gabungan semua validator di atas.
+ *
+ * Rules tambahan:
+ * - `abmsInput` WAJIB kalau `standards` termasuk 'ABMS'.
+ * - `complexities` optional — kalau ada, validate.
+ * - `isIntegrated` auto dari `standards.length > 1` (tak validate manual).
  */
 export function validateCalculationInput(input: unknown): ValidationResult {
   const errors: ValidationError[] = [];
@@ -281,8 +385,9 @@ export function validateCalculationInput(input: unknown): ValidationResult {
 
   const calc = input as Partial<CalculationInput>;
 
-  // Standard
-  errors.push(...validateStandard(calc.standard).errors);
+  // Standards (array)
+  const standardsResult = validateStandards(calc.standards);
+  errors.push(...standardsResult.errors);
 
   // FTE
   errors.push(...validateFte(calc.fte).errors);
@@ -293,16 +398,19 @@ export function validateCalculationInput(input: unknown): ValidationResult {
   // Application type
   errors.push(...validateApplicationType(calc.applicationType).errors);
 
-  // Complexity (optional)
-  errors.push(...validateComplexity(calc.complexity).errors);
+  // Complexities (optional, per standard)
+  errors.push(...validateComplexities(calc.complexities).errors);
 
-  // ABMS input — WAJIB kalau standard = ABMS
-  if (calc.standard === 'ABMS') {
+  // ABMS input — WAJIB kalau standards ada 'ABMS'
+  const hasAbms =
+    Array.isArray(calc.standards) && calc.standards.includes('ABMS');
+
+  if (hasAbms) {
     if (calc.abmsInput === undefined || calc.abmsInput === null) {
       errors.push({
         field: 'abmsInput',
         code: 'REQUIRED',
-        message: 'ABMS input is required when standard is ABMS.',
+        message: 'ABMS input is required when standards include ABMS.',
       });
     } else {
       errors.push(...validateAbmsInput(calc.abmsInput).errors);

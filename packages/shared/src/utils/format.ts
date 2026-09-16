@@ -88,6 +88,54 @@ export function formatStandardShort(code: StandardCode): string {
   return code;
 }
 
+/**
+ * Format senarai standard (untuk IMS).
+ *
+ * Contoh:
+ *   ['QMS']                → "QMS"
+ *   ['QMS', 'ABMS']        → "QMS + ABMS"
+ *   ['QMS', 'ABMS', 'EMS'] → "QMS + ABMS + EMS"
+ */
+export function formatStandardsList(
+  codes: readonly StandardCode[],
+): string {
+  if (codes.length === 0) return 'N/A';
+  return codes.join(' + ');
+}
+
+/**
+ * Format senarai standard + nama penuh.
+ *
+ * Contoh:
+ *   ['QMS']         → "QMS (Quality Management System)"
+ *   ['QMS', 'ABMS'] → "QMS + ABMS (Integrated)"
+ */
+export function formatStandardsWithNames(
+  codes: readonly StandardCode[],
+): string {
+  if (codes.length === 0) return 'N/A';
+  if (codes.length === 1) {
+    const code = codes[0]!;
+    return `${code} (${formatStandardName(code)})`;
+  }
+  return `${codes.join(' + ')} (Integrated)`;
+}
+
+/**
+ * Label untuk single vs integrated.
+ *
+ * Contoh:
+ *   ['QMS']         → "Single"
+ *   ['QMS', 'ABMS'] → "Integrated (2 standards)"
+ */
+export function formatIntegrationLabel(
+  codes: readonly StandardCode[],
+): string {
+  if (codes.length === 0) return 'N/A';
+  if (codes.length === 1) return 'Single';
+  return `Integrated (${codes.length} standards)`;
+}
+
 // =============================================================================
 // COMPLEXITY
 // =============================================================================
@@ -117,6 +165,22 @@ export function formatComplexity(level: ComplexityLevel): string {
  */
 export function formatComplexityFull(level: ComplexityLevel): string {
   return `${formatComplexity(level)} Complexity`;
+}
+
+/**
+ * Format complexities map (per standard) untuk paparan.
+ *
+ * Contoh:
+ *   { QMS: 'LOW', ABMS: 'HIGH' } → "QMS: Low, ABMS: High"
+ */
+export function formatComplexitiesMap(
+  map: Readonly<Partial<Record<StandardCode, ComplexityLevel>>>,
+): string {
+  const entries = Object.entries(map);
+  if (entries.length === 0) return 'N/A';
+  return entries
+    .map(([code, level]) => `${code}: ${formatComplexity(level as ComplexityLevel)}`)
+    .join(', ');
 }
 
 // =============================================================================

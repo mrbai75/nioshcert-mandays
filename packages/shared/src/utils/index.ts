@@ -1,6 +1,6 @@
 /**
  * Barrel export untuk semua utils.
- * Guna: import { capCeil, formatMandays } from '@sambung/shared';
+ * Guna: import { capCeil, formatMandays } from '@nioshcert/shared';
  */
 
 // =============================================================================
@@ -30,7 +30,9 @@ export {
   validateSites,
   validateCpiScore,
   validateStandard,
+  validateStandards,
   validateComplexity,
+  validateComplexities,
   validateApplicationType,
   validateAbmsInput,
   validateCalculationInput,
@@ -49,8 +51,12 @@ export {
   formatStandardName,
   formatStandardWithVersion,
   formatStandardShort,
+  formatStandardsList,
+  formatStandardsWithNames,
+  formatIntegrationLabel,
   formatComplexity,
   formatComplexityFull,
+  formatComplexitiesMap,
   formatApplicationType,
   formatDate,
   formatDateTime,
