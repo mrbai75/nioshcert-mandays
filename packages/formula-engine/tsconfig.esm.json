@@ -1,13 +1,17 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "noEmit": true,
+    "outDir": "./dist/esm",
     "rootDir": "./src",
+    "composite": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "target": "ES2022",
     "lib": ["ES2022"],
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "isolatedModules": true,
     "skipLibCheck": true,
     "esModuleInterop": true

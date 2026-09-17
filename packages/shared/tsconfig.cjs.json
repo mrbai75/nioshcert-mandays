@@ -1,13 +1,17 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true,
+    "outDir": "./dist/cjs",
     "rootDir": "./src",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "composite": false,
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "target": "ES2022",
     "lib": ["ES2022"],
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "isolatedModules": true,
     "skipLibCheck": true,
     "esModuleInterop": true
