@@ -175,6 +175,7 @@ model Standard {
   mandaysTable         MandaysTable[]
   sectorComplexity     SectorComplexity[]
   applicationStandards ApplicationStandard[]
+  questionStandards    QuestionStandard[]
 
   // Audit
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
@@ -438,4 +439,85 @@ model AuditLog {
   @@index([createdAt])
   @@index([action])
   @@map("audit_logs")
+}
+
+
+// =============================================================================
+// 11. SECTIONS - Group soalan questionnaire
+// =============================================================================
+
+model Section {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique @db.VarChar(100)
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  order       Int      @default(0)
+  condition   Json?
+  isActive    Boolean  @default(true) @map("is_active")
+
+  questions   Question[]
+
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([key])
+  @@map("sections")
+}
+
+// =============================================================================
+// 12. QUESTIONS - Soalan questionnaire (master)
+// =============================================================================
+
+model Question {
+  id              String   @id @default(uuid()) @db.Uuid
+  key             String   @unique @db.VarChar(100)
+  source          String?  @db.VarChar(50)
+
+  type            String   @db.VarChar(20)
+  label           String   @db.VarChar(1000)
+  description     String?  @db.Text
+  placeholder     String?  @db.VarChar(255)
+
+  required        Boolean  @default(false)
+  order           Int      @default(0)
+
+  validation      Json?
+  options         Json?
+  complexityImpact Json?   @map("complexity_impact")
+  fteImpact       Json?    @map("fte_impact")
+  mandaysImpact   Json?    @map("mandays_impact")
+  dependsOn       Json?    @map("depends_on")
+
+  sectionId       String?  @map("section_id") @db.Uuid
+  section         Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  isActive        Boolean  @default(true) @map("is_active")
+
+  standards       QuestionStandard[]
+
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([key])
+  @@index([sectionId])
+  @@index([isActive])
+  @@map("questions")
+}
+
+// =============================================================================
+// 13. QUESTION STANDARDS - Relation: soalan applies to standard mana
+// =============================================================================
+
+model QuestionStandard {
+  questionId  String   @map("question_id") @db.Uuid
+  standardId  String   @map("standard_id") @db.Uuid
+
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  standard    Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@id([questionId, standardId])
+  @@index([standardId])
+  @@map("question_standards")
 }
