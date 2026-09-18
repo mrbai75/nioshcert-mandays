@@ -1,7 +1,8 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { FormulaModule } from './formula/formula.module';
 import { HealthModule } from './modules/health/health.module';
+import { StandardsModule } from './modules/standards/standards.module';
 
 // Root module — daftar semua module di sini
 @Module({
@@ -9,7 +10,7 @@ import { HealthModule } from './modules/health/health.module';
     PrismaModule,
     FormulaModule,
     HealthModule,
-    // Module lain akan ditambah dalam fasa 7.2+
+    StandardsModule,
   ],
 })
 export class AppModule {}

@@ -1,5 +1,5 @@
-﻿import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 // Bootstrap aplikasi NestJS
@@ -8,6 +8,15 @@ async function bootstrap() {
 
   // Global prefix untuk semua endpoint
   app.setGlobalPrefix('api');
+
+  // Validation pipe global (guna class-validator)
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: false,
+    }),
+  );
 
   // CORS untuk frontend (fasa 8)
   app.enableCors({
