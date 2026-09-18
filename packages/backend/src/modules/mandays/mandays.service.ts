@@ -12,7 +12,7 @@ export class MandaysService {
    * Filter: ?standard=OSHMS&complexity=HIGH&fte=9
    * Jika fte diberi, cari band yang match sahaja.
    */
-  async findAll(query: ListMandaysQueryDto) {
+  async findAll(query: ListMandaysQueryDto): Promise<{ items: any[]; total: number }> {
     const where: any = {
       isActive: true,
     };
@@ -60,7 +60,11 @@ export class MandaysService {
    * Lookup mandays untuk FTE + standard + complexity.
    * Return satu row yang match.
    */
-  async lookup(standardCode: string, fte: number, complexityCode: string) {
+  async lookup(
+    standardCode: string,
+    fte: number,
+    complexityCode: string,
+  ): Promise<any> {
     const row = await this.prisma.client.mandaysTable.findFirst({
       where: {
         isActive: true,
