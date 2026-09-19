@@ -1,4 +1,4 @@
-// Seed questionnaire dari MD files → DB
+// Seed questionnaire dari MD files -> DB
 // Idempotent: boleh run berulang (upsert)
 
 import * as fs from 'fs';
@@ -18,12 +18,9 @@ function normalizeStandard(raw: string): string[] {
   if (upper.includes('ALL') || upper.includes('COMMON')) {
     return ['OSHMS', 'QMS', 'EMS', 'ABMS', 'ISMS'];
   }
-  if (upper.includes('OSHMS')) return ['OSHMS'];
-  if (upper.includes('QMS')) return ['QMS'];
-  if (upper.includes('EMS')) return ['EMS'];
-  if (upper.includes('ABMS')) return ['ABMS'];
-  if (upper.includes('ISMS')) return ['ISMS'];
-  return [];
+  const codes = ['OSHMS', 'QMS', 'EMS', 'ABMS', 'ISMS'];
+  const matched = codes.filter((c) => upper.includes(c));
+  return matched;
 }
 
 async function seedSection(sectionKey: string, order: number) {
@@ -40,7 +37,6 @@ async function seedSection(sectionKey: string, order: number) {
 }
 
 async function seedQuestion(q: ParsedQuestionnaire['questions'][0], sectionId: string, order: number) {
-  // Convert guna ke complexityImpact/fteImpact/mandaysImpact
   let complexityImpact: any = null;
   let fteImpact: any = null;
   let mandaysImpact: any = null;
@@ -82,7 +78,7 @@ async function seedQuestion(q: ParsedQuestionnaire['questions'][0], sectionId: s
       description: q.description ?? null,
       required: q.required,
       order,
-      // sectionId: JANGAN update â€” kekalkan section asal (elak soalan common ditimpa)
+      // sectionId: JANGAN update — kekalkan section asal
       options: q.options ?? null,
       complexityImpact: complexityImpact ?? undefined,
       fteImpact: fteImpact ?? undefined,
@@ -106,7 +102,6 @@ async function seedQuestion(q: ParsedQuestionnaire['questions'][0], sectionId: s
     },
   });
 
-  // Link ke standards
   const standards = normalizeStandard(q.appliesTo.join(','));
   for (const code of standards) {
     const std = await prisma.standard.findFirst({
@@ -135,17 +130,38 @@ async function seedQuestion(q: ParsedQuestionnaire['questions'][0], sectionId: s
   return question;
 }
 
-async function seedFile(filePath: string) {
+// PRE-SCAN: Bina map question.key -> union(appliesTo)
+function preScanAllStandards(files: string[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const f of files) {
+    const parsed = parseQuestionnaireMd(path.join(MD_DIR, f));
+    for (const q of parsed.questions) {
+      const codes = normalizeStandard(q.appliesTo.join(','));
+      const existing = map.get(q.key) ?? [];
+      const union = Array.from(new Set([...existing, ...codes]));
+      map.set(q.key, union);
+    }
+  }
+  return map;
+}
+
+async function seedFile(
+  filePath: string,
+  standardMap: Map<string, string[]>,
+) {
   const fileName = path.basename(filePath);
   console.log(`\n📄 Processing: ${fileName}`);
 
   const parsed = parseQuestionnaireMd(filePath);
   console.log(`   CAS: ${parsed.casNumber}, Standard: ${parsed.standard}, Soalan: ${parsed.questions.length}`);
 
-  // Group by section
   const bySection = new Map<string, ParsedQuestionnaire['questions']>();
   for (const q of parsed.questions) {
-    const sec = q.section || 'default';
+    const allStandards = standardMap.get(q.key) ?? normalizeStandard(q.appliesTo.join(','));
+    let sec = q.section || 'default';
+    if (allStandards.length > 1 && allStandards.length < 5) {
+      sec = 'multi_standard';
+    }
     if (!bySection.has(sec)) bySection.set(sec, []);
     bySection.get(sec)!.push(q);
   }
@@ -170,8 +186,16 @@ async function main() {
   const files = fs.readdirSync(MD_DIR).filter((f) => f.endsWith('.md'));
   files.sort();
 
+  // PRE-SCAN
+  console.log('🔍 Pre-scanning MD files untuk multi-standard detection...');
+  const standardMap = preScanAllStandards(files);
+  const multiCount = Array.from(standardMap.values()).filter(
+    (v) => v.length > 1 && v.length < 5,
+  ).length;
+  console.log(`   Multi-standard questions: ${multiCount}\n`);
+
   for (const f of files) {
-    await seedFile(path.join(MD_DIR, f));
+    await seedFile(path.join(MD_DIR, f), standardMap);
   }
 
   const totalQ = await prisma.question.count();
