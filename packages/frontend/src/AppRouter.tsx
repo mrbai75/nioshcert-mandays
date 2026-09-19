@@ -3,6 +3,7 @@ import { Layout } from '@/components/Layout';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { HealthPage } from '@/pages/HealthPage';
 import { QuestionnairePage } from '@/pages/QuestionnairePage';
+import { AnswersPage } from '@/pages/AnswersPage';
 import { ReviewPage } from '@/pages/ReviewPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
@@ -14,6 +15,7 @@ export function AppRouter() {
           <Route index element={<DashboardPage />} />
           <Route path="/health" element={<HealthPage />} />
           <Route path="/questionnaire/new" element={<QuestionnairePage />} />
+          <Route path="/questionnaire/answers" element={<AnswersPage />} />
           <Route path="/review" element={<ReviewPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

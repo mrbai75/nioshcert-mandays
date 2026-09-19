@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useApplicationStore } from '@/lib/applicationStore';
 import { Step1CompanyInfo } from './Step1CompanyInfo';
 import { Step2PicContact } from './Step2PicContact';
@@ -60,6 +61,7 @@ export function ApplicationWizard() {
   const setStep = useApplicationStore((s) => s.setStep);
   const data = useApplicationStore((s) => s.data);
   const reset = useApplicationStore((s) => s.reset);
+  const navigate = useNavigate();
 
   const CurrentStep = STEPS[step - 1].component;
   const isLastStep = step === STEPS.length;
@@ -82,9 +84,8 @@ export function ApplicationWizard() {
   };
 
   const handleSubmit = () => {
-    // TODO Fasa 8.5: submit ke backend + redirect ke questionnaire
-    alert('Continue to Questionnaire — akan diimplement dalam Fasa 8.5');
-    console.log('Form data:', data);
+    // Redirect ke questionnaire answers page
+    navigate('/questionnaire/answers');
   };
 
   const handleReset = () => {
