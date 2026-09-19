@@ -9,12 +9,17 @@ export function Step1CompanyInfo() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-900">
-        Company Information
-      </h2>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900">
+          Company Information
+        </h2>
+        <p className="text-sm text-gray-600">
+          Basic details about your organisation.
+        </p>
+      </div>
 
       <FormInput
-        label="Company Name"
+        label="Name of Company / Organisation"
         value={company.name}
         onChange={(v) => updateCompany({ name: v })}
         placeholder="e.g. HYTRO VISTA SDN BHD"
@@ -30,31 +35,26 @@ export function Step1CompanyInfo() {
         rows={3}
       />
 
-      <div className="grid grid-cols-2 gap-4">
-        <FormSelect
-          label="Legal Status"
-          value={company.legalStatus}
-          onChange={(v) => updateCompany({ legalStatus: v })}
-          options={[
-            { value: 'ROC', label: 'ROC (Sdn Bhd / Bhd)' },
-            { value: 'ROB', label: 'ROB (Enterprise)' },
-          ]}
-          placeholder="Select legal status"
-          required
-        />
+      <FormInput
+        label="Legal Status (R.O.C. No. or R.O.B. No.)"
+        value={company.legalStatus}
+        onChange={(v) => updateCompany({ legalStatus: v })}
+        placeholder="e.g. 1234567-X"
+        required
+      />
 
-        <FormSelect
-          label="Organization Type"
-          value={company.orgType}
-          onChange={(v) => updateCompany({ orgType: v })}
-          options={[
-            { value: 'Private', label: 'Private' },
-            { value: 'Government', label: 'Government' },
-          ]}
-          placeholder="Select org type"
-          required
-        />
-      </div>
+      <FormSelect
+        label="Type of Organisation"
+        value={company.orgType}
+        onChange={(v) => updateCompany({ orgType: v })}
+        options={[
+          { value: 'Government', label: 'Government' },
+          { value: 'Private', label: 'Private' },
+          { value: 'Other', label: 'Other' },
+        ]}
+        placeholder="Select type"
+        required
+      />
 
       <div className="flex items-center gap-2">
         <input
@@ -65,43 +65,8 @@ export function Step1CompanyInfo() {
           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <label htmlFor="bumiputera" className="text-sm text-gray-700">
-          Bumiputera Status
+          Is your organization Bumiputera?
         </label>
-      </div>
-
-      <h3 className="text-md font-semibold text-gray-900 pt-4 border-t border-gray-200">
-        Contact Person (PIC)
-      </h3>
-
-      <div className="grid grid-cols-2 gap-4">
-        <FormInput
-          label="Contact Name"
-          value={company.contactName}
-          onChange={(v) => updateCompany({ contactName: v })}
-          required
-        />
-        <FormInput
-          label="Designation"
-          value={company.contactDesignation}
-          onChange={(v) => updateCompany({ contactDesignation: v })}
-          required
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <FormInput
-          label="Phone"
-          value={company.contactPhone}
-          onChange={(v) => updateCompany({ contactPhone: v })}
-          required
-        />
-        <FormInput
-          label="Email"
-          type="email"
-          value={company.contactEmail}
-          onChange={(v) => updateCompany({ contactEmail: v })}
-          required
-        />
       </div>
     </div>
   );

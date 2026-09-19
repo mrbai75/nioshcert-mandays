@@ -1,50 +1,83 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// =============================================================================
+// TYPES
+// =============================================================================
+
 export interface CompanyInfo {
   name: string;
   address: string;
   legalStatus: string;
   orgType: string;
   isBumiputera: boolean;
-  contactName: string;
-  contactDesignation: string;
-  contactPhone: string;
-  contactEmail: string;
 }
 
-export interface FteBreakdown {
+export interface PicContact {
+  name: string;
+  designation: string;
+  phone: string;
+  email: string;
+}
+
+export interface Employees {
+  total: number;
   management: number;
   permanent: number;
   contract: number;
   repetitive: number;
 }
 
-export type CertificationType = 'SINGLE' | 'INTEGRATED';
+export interface ShiftOutsource {
+  hasShift: boolean;
+  shift1: number;
+  shift2: number;
+  shift3: number;
+  outsourceActivities: string;
+}
+
+export interface ScopeIndustry {
+  scope: string;
+  industryType: string;
+  includeSites: boolean;
+  sitesCount: number;
+}
+
+export interface Documentation {
+  established: boolean;
+  type: 'Individual' | 'Integrated' | '';
+  manualIntegrated: boolean;
+  policyIntegrated: boolean;
+  internalAuditIntegrated: boolean;
+}
+
+export interface AdditionalInfo {
+  targetDate: string;
+  hasOtherCerts: boolean;
+  otherCertsDetails: string;
+  hasConsultant: boolean;
+  consultantName: string;
+  marketingSource: string;
+  declaration: boolean;
+}
 
 export interface ApplicationFormData {
   company: CompanyInfo;
-  certificationType: CertificationType;
+  pic: PicContact;
+  employees: Employees;
+  shift: ShiftOutsource;
+  scopeIndustry: ScopeIndustry;
   standards: string[];
-  fte: FteBreakdown;
-  industryType: string;
-  cpiScore: number | null;
+  certificationType: 'SINGLE' | 'INTEGRATED';
+  documentation: Documentation;
+  additional: AdditionalInfo;
 }
 
-interface ApplicationStore {
-  step: number;
-  data: ApplicationFormData;
-  setStep: (step: number) => void;
-  updateCompany: (company: Partial<CompanyInfo>) => void;
-  setCertificationType: (type: CertificationType) => void;
-  toggleStandard: (code: string) => void;
-  selectSingleStandard: (code: string) => void;
-  updateFte: (fte: Partial<FteBreakdown>) => void;
-  updateIndustry: (industryType: string, cpiScore: number | null) => void;
-  reset: () => void;
-}
+// =============================================================================
+// STORE
+// =============================================================================
 
-const MAX_STEP = 4;
+const MAX_STEP = 7;
 
 const initialData: ApplicationFormData = {
   company: {
@@ -53,33 +86,112 @@ const initialData: ApplicationFormData = {
     legalStatus: '',
     orgType: '',
     isBumiputera: false,
-    contactName: '',
-    contactDesignation: '',
-    contactPhone: '',
-    contactEmail: '',
   },
-  certificationType: 'SINGLE',
-  standards: [],
-  fte: {
+  pic: {
+    name: '',
+    designation: '',
+    phone: '',
+    email: '',
+  },
+  employees: {
+    total: 0,
     management: 0,
     permanent: 0,
     contract: 0,
     repetitive: 0,
   },
-  industryType: '',
-  cpiScore: null,
+  shift: {
+    hasShift: false,
+    shift1: 0,
+    shift2: 0,
+    shift3: 0,
+    outsourceActivities: '',
+  },
+  scopeIndustry: {
+    scope: '',
+    industryType: '',
+    includeSites: false,
+    sitesCount: 0,
+  },
+  standards: [],
+  certificationType: 'SINGLE',
+  documentation: {
+    established: false,
+    type: '',
+    manualIntegrated: false,
+    policyIntegrated: false,
+    internalAuditIntegrated: false,
+  },
+  additional: {
+    targetDate: '',
+    hasOtherCerts: false,
+    otherCertsDetails: '',
+    hasConsultant: false,
+    consultantName: '',
+    marketingSource: '',
+    declaration: false,
+  },
 };
+
+interface ApplicationStore {
+  step: number;
+  data: ApplicationFormData;
+
+  setStep: (step: number) => void;
+
+  updateCompany: (company: Partial<CompanyInfo>) => void;
+  updatePic: (pic: Partial<PicContact>) => void;
+  updateEmployees: (employees: Partial<Employees>) => void;
+  updateShift: (shift: Partial<ShiftOutsource>) => void;
+  updateScopeIndustry: (scopeIndustry: Partial<ScopeIndustry>) => void;
+  setCertificationType: (type: 'SINGLE' | 'INTEGRATED') => void;
+  toggleStandard: (code: string) => void;
+  selectSingleStandard: (code: string) => void;
+  updateDocumentation: (documentation: Partial<Documentation>) => void;
+  updateAdditional: (additional: Partial<AdditionalInfo>) => void;
+
+  reset: () => void;
+}
 
 export const useApplicationStore = create<ApplicationStore>()(
   persist(
     (set) => ({
       step: 1,
       data: initialData,
+
       setStep: (step) => set({ step: Math.max(1, Math.min(MAX_STEP, step)) }),
+
       updateCompany: (company) =>
         set((state) => ({
           data: { ...state.data, company: { ...state.data.company, ...company } },
         })),
+
+      updatePic: (pic) =>
+        set((state) => ({
+          data: { ...state.data, pic: { ...state.data.pic, ...pic } },
+        })),
+
+      updateEmployees: (employees) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            employees: { ...state.data.employees, ...employees },
+          },
+        })),
+
+      updateShift: (shift) =>
+        set((state) => ({
+          data: { ...state.data, shift: { ...state.data.shift, ...shift } },
+        })),
+
+      updateScopeIndustry: (scopeIndustry) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            scopeIndustry: { ...state.data.scopeIndustry, ...scopeIndustry },
+          },
+        })),
+
       setCertificationType: (certificationType) =>
         set((state) => {
           const standards =
@@ -88,6 +200,7 @@ export const useApplicationStore = create<ApplicationStore>()(
               : state.data.standards;
           return { data: { ...state.data, certificationType, standards } };
         }),
+
       toggleStandard: (code) =>
         set((state) => {
           const standards = state.data.standards.includes(code)
@@ -95,6 +208,7 @@ export const useApplicationStore = create<ApplicationStore>()(
             : [...state.data.standards, code];
           return { data: { ...state.data, standards } };
         }),
+
       selectSingleStandard: (code) =>
         set((state) => {
           const alreadyOnly =
@@ -106,24 +220,47 @@ export const useApplicationStore = create<ApplicationStore>()(
             },
           };
         }),
-      updateFte: (fte) =>
+
+      updateDocumentation: (documentation) =>
         set((state) => ({
-          data: { ...state.data, fte: { ...state.data.fte, ...fte } },
+          data: {
+            ...state.data,
+            documentation: { ...state.data.documentation, ...documentation },
+          },
         })),
-      updateIndustry: (industryType, cpiScore) =>
+
+      updateAdditional: (additional) =>
         set((state) => ({
-          data: { ...state.data, industryType, cpiScore },
+          data: {
+            ...state.data,
+            additional: { ...state.data.additional, ...additional },
+          },
         })),
+
       reset: () => set({ step: 1, data: initialData }),
     }),
     {
       name: 'scale-application-draft',
-      version: 2,
+      version: 3,
       migrate: () => ({ step: 1, data: initialData }),
     },
   ),
 );
 
-export function calculateTotalFte(fte: FteBreakdown): number {
-  return fte.management + fte.permanent + fte.contract * 0.5 + fte.repetitive;
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+export function calculateTotalFte(employees: Employees): number {
+  return (
+    employees.management +
+    employees.permanent +
+    employees.contract * 0.5 +
+    employees.repetitive
+  );
+}
+
+export function calculateShiftTotal(shift: ShiftOutsource): number {
+  if (!shift.hasShift) return 0;
+  return shift.shift1 + shift.shift2 + shift.shift3;
 }
