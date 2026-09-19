@@ -33,7 +33,8 @@
     "db:seed:complexity": "tsx scripts/seed-complexity.ts",
     "db:seed:mandays": "tsx scripts/seed-mandays.ts",
     "db:seed:sectors": "tsx scripts/seed-sectors.ts",
-    "db:seed:all": "tsx scripts/seed-all.ts",
+    "db:seed:questionnaire": "tsx scripts/seed-questionnaire.ts",
+    "db:seed:all": "tsx scripts/seed-all.ts && tsx scripts/seed-questionnaire.ts",
     "db:reset": "prisma migrate reset --force",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
