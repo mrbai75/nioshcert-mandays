@@ -3,7 +3,7 @@
 Status terkini projek **NIOSHCert Mandays Calculation System**.
 
 **Kemas kini terakhir:** 19 September 2026
-**Versi:** 5.0
+**Versi:** 5.1
 
 ---
 
@@ -16,7 +16,7 @@ Status terkini projek **NIOSHCert Mandays Calculation System**.
 | 3 | Database | SIAP | 13 table (10 asal + 3 questionnaire) |
 | 4 | Docs (01-15) | SIAP | Semua MD + questionnaires/ |
 | 5 | packages/shared | SIAP | 82/82 test PASS, dual-mode |
-| 6 | Seed data | SIAP | 436 rows + 117 soalan questionnaire |
+| 6 | Seed data | SIAP | 436 rows + 119 soalan questionnaire |
 | 7 | Backend API (NestJS) | SIAP | 13 endpoint, 15/15 E2E PASS |
 | 8 | Frontend UI (React) | BELUM | Seterusnya |
 | 9 | PDF Export (Puppeteer) | BELUM | |
@@ -89,13 +89,13 @@ package.json dual exports (import + require).
 | 15-16-abms.md | CAS 15-16 | 16 |
 | 15-19-isms.md | CAS 15-19 | 13 |
 
-Total: 134 soalan.
+Total: 134 soalan (mentah, sebelum dedupe).
 
 ### DB - 3 table baru
 
 - sections — grouping soalan (13 row)
-- questions — soalan (117 row, dedupe)
-- question_standards — relation (300 row)
+- questions — soalan (119 row, dedupe)
+- question_standards — relation (302 row)
 
 ### Seed
 
@@ -193,4 +193,4 @@ Guna 13 endpoint API.
 
 https://github.com/mrbai75/nioshcert-mandays
 
-Commit terakhir: fb47ebd (Fasa 7.5 - test E2E)
+Commit terakhir: 9712bdb (chore: update EMS questionnaire + workspace config)
