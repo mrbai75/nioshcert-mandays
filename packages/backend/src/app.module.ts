@@ -7,6 +7,7 @@ import { ComplexityModule } from './modules/complexity/complexity.module';
 import { MandaysModule } from './modules/mandays/mandays.module';
 import { SectorsModule } from './modules/sectors/sectors.module';
 import { QuestionnaireModule } from './modules/questionnaire/questionnaire.module';
+import { CalculationModule } from './modules/calculation/calculation.module';
 
 // Root module — daftar semua module di sini
 @Module({
@@ -19,6 +20,7 @@ import { QuestionnaireModule } from './modules/questionnaire/questionnaire.modul
     MandaysModule,
     SectorsModule,
     QuestionnaireModule,
+    CalculationModule,
   ],
 })
 export class AppModule {}
