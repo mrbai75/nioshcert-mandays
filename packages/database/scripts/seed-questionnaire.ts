@@ -82,7 +82,7 @@ async function seedQuestion(q: ParsedQuestionnaire['questions'][0], sectionId: s
       description: q.description ?? null,
       required: q.required,
       order,
-      sectionId,
+      // sectionId: JANGAN update â€” kekalkan section asal (elak soalan common ditimpa)
       options: q.options ?? null,
       complexityImpact: complexityImpact ?? undefined,
       fteImpact: fteImpact ?? undefined,
