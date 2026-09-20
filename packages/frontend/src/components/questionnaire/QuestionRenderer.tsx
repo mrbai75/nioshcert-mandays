@@ -3,12 +3,32 @@ import type { Question } from '@/hooks/useQuestionnaire';
 
 interface Props {
   question: Question;
+  allQuestions?: Question[];
 }
 
-export function QuestionRenderer({ question }: Props) {
+export function QuestionRenderer({ question, allQuestions = [] }: Props) {
   const answers = useQuestionnaireStore((s) => s.answers);
   const setAnswer = useQuestionnaireStore((s) => s.setAnswer);
   const value = answers[question.key];
+
+  // Handle dependsOn — sembunyi soalan kalau syarat tak dipenuhi
+  if (question.dependsOn?.raw) {
+    const match = question.dependsOn.raw.match(/(Q\d+)\s*=\s*(Yes|No)/i);
+    if (match) {
+      const [, sourceQ, expected] = match;
+      // Cari soalan dengan source mengandungi Q-number
+      const sourceQuestion = allQuestions.find((q) =>
+        q.source?.includes(sourceQ),
+      );
+      if (sourceQuestion) {
+        const sourceValue = answers[sourceQuestion.key];
+        const expectedBool = expected.toLowerCase() === 'yes';
+        if (sourceValue !== expectedBool) {
+          return null; // Sembunyi
+        }
+      }
+    }
+  }
 
   const handleChange = (v: unknown) => setAnswer(question.key, v);
 

@@ -20,6 +20,25 @@ export function SectionWizard({ sections, onComplete }: Props) {
   const validate = (): string | null => {
     for (const q of section.questions) {
       if (!q.required) continue;
+
+      // Skip kalau dependsOn tak dipenuhi (soalan tersembunyi)
+      if (q.dependsOn?.raw) {
+        const match = q.dependsOn.raw.match(/(Q\d+)\s*=\s*(Yes|No)/i);
+        if (match) {
+          const [, sourceQ, expected] = match;
+          const sourceQuestion = section.questions.find((sq) =>
+            sq.source?.includes(sourceQ),
+          );
+          if (sourceQuestion) {
+            const sourceValue = answers[sourceQuestion.key];
+            const expectedBool = expected.toLowerCase() === 'yes';
+            if (sourceValue !== expectedBool) {
+              continue; // Skip soalan tersembunyi
+            }
+          }
+        }
+      }
+
       const val = answers[q.key];
       if (val === undefined || val === null || val === '') {
         return `"${q.label}" is required`;
@@ -86,7 +105,7 @@ export function SectionWizard({ sections, onComplete }: Props) {
             <span className="text-xs text-gray-400">
               Q{idx + 1} of {section.questions.length}
             </span>
-            <QuestionRenderer question={q} />
+            <QuestionRenderer question={q} allQuestions={section.questions} />
           </div>
         ))}
       </div>
