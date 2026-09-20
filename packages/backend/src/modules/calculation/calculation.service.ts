@@ -4,13 +4,13 @@
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { FormulaService } from '../../formula/formula.service';
 import { FteAdapter } from './adapters/fte.adapter';
 import {
   ComplexityAdapter,
   ComplexityLevel,
 } from './adapters/complexity.adapter';
 import { CreateCalculationDto } from './dto/create-calculation.dto';
+import { calculateIms, CalculationInput } from '@nioshcert/formula-engine';
 
 // =============================================================================
 // TYPES
@@ -35,7 +35,7 @@ export interface ImsReductionInfo {
   applied: boolean;
   suggestedReduction: number;
   actualReduction: number;
-  source: 'AUTO' | 'OVERRIDE' | 'NONE';
+  source: 'AUTO' | 'OVERRIDE';
   breakdown: {
     manualIntegrated: boolean;
     policyIntegrated: boolean;
@@ -62,8 +62,6 @@ export interface CalculationResponse {
   ims?: ImsReductionInfo;
 }
 
-const MAX_IMS_REDUCTION = 0.20;
-
 // =============================================================================
 // SERVICE
 // =============================================================================
@@ -72,7 +70,6 @@ const MAX_IMS_REDUCTION = 0.20;
 export class CalculationService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly formulaService: FormulaService,
     private readonly fteAdapter: FteAdapter,
     private readonly complexityAdapter: ComplexityAdapter,
   ) {}
@@ -89,11 +86,11 @@ export class CalculationService {
     // 0. Merge application.employees ke answers (kalau ada)
     const mergedAnswers = this.mergeApplicationIntoAnswers(dto);
 
-    // 1. Kira FTE
+    // 1. Kira FTE (backend adapter)
     const fteResult = this.fteAdapter.calculate(mergedAnswers);
 
-    // 2. Kira setiap standard
-    const results: StandardCalculation[] = [];
+    // 2. Tentukan complexity per standard (backend adapter)
+    const standardInputs: CalculationInput[] = [];
 
     for (const code of codes) {
       const standard = await this.prisma.client.standard.findFirst({
@@ -116,92 +113,71 @@ export class CalculationService {
       } else if (dto.complexityOverride && code === codes[0]) {
         complexity = dto.complexityOverride.toUpperCase() as ComplexityLevel;
       } else {
-        const detected = await this.complexityAdapter.detect(code, mergedAnswers);
+        const detected = await this.complexityAdapter.detect(
+          code,
+          mergedAnswers,
+        );
         complexity = detected.complexity;
       }
 
-      const input = {
+      standardInputs.push({
         standard: code as any,
         fte: fteResult.fte,
-        applicationType: appType,
+        applicationType: appType as any,
         complexity: complexity ?? undefined,
-      };
-
-      let calculation: any;
-      try {
-        calculation = this.formulaService.engine.calculate(input);
-      } catch (err) {
-        results.push({
-          standard: code,
-          fte: fteResult.fte,
-          complexity,
-          baseMd: null,
-          effectiveMd: null,
-          stage1Md: null,
-          stage2Md: null,
-          surveillanceMd: null,
-          recertMd: null,
-          requiresManualInput: true,
-          trace: [],
-          meta: { error: (err as Error).message },
-        });
-        continue;
-      }
-
-      results.push({
-        standard: code,
-        fte: fteResult.fte,
-        complexity,
-        baseMd: calculation.baseMd,
-        effectiveMd: calculation.effectiveMd,
-        stage1Md: calculation.stage1Md,
-        stage2Md: calculation.stage2Md,
-        surveillanceMd: calculation.surveillanceMd,
-        recertMd: calculation.recertMd,
-        requiresManualInput: calculation.requiresManualInput,
-        trace: calculation.trace ?? [],
-        meta: calculation.meta,
       });
     }
 
-    // 3. Kira IMS reduction (kalau IMS)
+    // 3. Panggil engine — SEMUA calculation guna calculateIms()
+    const suggested = this.calculateSuggestedReduction(mergedAnswers);
+
+    const imsResult = calculateIms({
+      standards: standardInputs,
+      suggestedReduction: suggested.reduction,
+      imsReduction: dto.imsReduction,
+    });
+
+    // 4. Map imsResult.individual → results[] (format backend)
+    const results: StandardCalculation[] = imsResult.individual.map((item) => {
+      const r = item.result;
+      const meta = r.meta as any;
+
+      return {
+        standard: item.standard,
+        fte: fteResult.fte,
+        complexity: (meta.complexity ?? null) as ComplexityLevel | null,
+        baseMd: r.baseMd,
+        effectiveMd: r.effectiveMd,
+        stage1Md: r.stage1Md,
+        stage2Md: r.stage2Md,
+        surveillanceMd: r.surveillanceMd,
+        recertMd: r.recertMd,
+        requiresManualInput: r.requiresManualInput,
+        trace: r.trace ?? [],
+        meta: r.meta,
+      };
+    });
+
+    // 5. Total MD (dari engine)
+    const totalEffectiveMd = imsResult.finalTotalMd;
+
+    // 6. IMS info (kalau isIms)
     let ims: ImsReductionInfo | undefined;
-    let totalEffectiveMd: number;
-
-    if (!isIms) {
-      totalEffectiveMd = results.reduce(
-        (sum, r) => sum + (r.effectiveMd ?? 0),
-        0,
-      );
-    } else {
-      const suggested = this.calculateSuggestedReduction(mergedAnswers);
-      const actualReduction =
-        dto.imsReduction !== undefined
-          ? Math.max(0, Math.min(MAX_IMS_REDUCTION, dto.imsReduction))
-          : suggested.reduction;
-      const source: 'AUTO' | 'OVERRIDE' =
-        dto.imsReduction !== undefined ? 'OVERRIDE' : 'AUTO';
-
-      const rawTotalMd = results.reduce(
-        (sum, r) => sum + (r.effectiveMd ?? 0),
-        0,
-      );
-      totalEffectiveMd = rawTotalMd * (1 - actualReduction);
-
+    if (isIms) {
       ims = {
         applied: true,
-        suggestedReduction: suggested.reduction,
-        actualReduction,
-        source,
+        suggestedReduction: imsResult.suggestedReduction,
+        actualReduction: imsResult.imsReduction,
+        source: imsResult.imsReductionSource,
         breakdown: suggested.breakdown,
-        rawTotalMd,
-        finalTotalMd: totalEffectiveMd,
-        reductionMinMd: rawTotalMd * (1 - MAX_IMS_REDUCTION),
-        reductionMaxMd: rawTotalMd * (1 - 0),
+        rawTotalMd: imsResult.rawTotalMd,
+        finalTotalMd: imsResult.finalTotalMd,
+        reductionMinMd: imsResult.reductionMinMd,
+        reductionMaxMd: imsResult.reductionMaxMd,
       };
     }
 
-    // 4. Save ke DB (kalau ada application info)
+    // 7. Save DB (kalau ada application info)
     let applicationId: string | null = null;
     let referenceNo: string | null = null;
     const calculationIds: string[] = [];
@@ -308,7 +284,7 @@ export class CalculationService {
       },
     });
 
-    // 3. Create ApplicationStandard per standard
+    // 3. Create ApplicationStandard + Calculation per standard
     const calculationIds: string[] = [];
 
     for (let i = 0; i < codes.length; i++) {
@@ -333,7 +309,6 @@ export class CalculationService {
         },
       });
 
-      // 4. Create Calculation
       const calcRefNo = this.generateCalculationRefNo();
 
       const calculation = await this.prisma.client.calculation.create({
@@ -378,12 +353,6 @@ export class CalculationService {
   // MERGE — application.employees → answers
   // ===========================================================================
 
-  /**
-   * Merge application.employees (management, permanent, contract, repetitive)
-   * ke answers dengan key FTE yang betul.
-   *
-   * Kalau application tiada, return answers as-is.
-   */
   private mergeApplicationIntoAnswers(
     dto: CreateCalculationDto,
   ): Record<string, unknown> {
@@ -408,8 +377,9 @@ export class CalculationService {
 
     return merged;
   }
+
   // ===========================================================================
-  // IMS REDUCTION (suggested)
+  // IMS REDUCTION — suggested (dari questionnaire answers)
   // ===========================================================================
 
   /**
@@ -481,7 +451,3 @@ export class CalculationService {
     return `CALC-${year}-${rand}`;
   }
 }
-
-
-
-
