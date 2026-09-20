@@ -17,7 +17,7 @@ import {
 import { getEffectiveMd } from './formulas/adjustment';
 import { getDerived, suggestStageSplit } from './formulas/derived';
 import { getOshmsBaseMd, OSHMS_METADATA } from './standards/oshms';
-import { getQmsBaseMd, QMS_METADATA } from './standards/qms';
+import { getQmsBaseMd, QMS_METADATA, detectQmsRiskCategory } from './standards/qms';
 import { getEmsBaseMd, EMS_METADATA } from './standards/ems';
 import {
   getAbmsBaseMd,
@@ -147,7 +147,7 @@ function getBaseMd(
     case 'OSHMS':
       return getOshmsBaseMd(fte, complexity as 'HIGH' | 'MEDIUM' | 'LOW');
     case 'QMS':
-      return getQmsBaseMd(fte);
+      return getQmsBaseMd(fte, complexity as 'HIGH' | 'MEDIUM' | 'LOW');
     case 'EMS':
       return getEmsBaseMd(fte, complexity as 'HIGH' | 'MEDIUM' | 'LOW' | 'LIMITED');
     case 'ABMS':
@@ -181,13 +181,22 @@ function buildMeta(
   complexity: ComplexityLevel | undefined,
   standardMeta: { code: string; name: string; referenceDoc: string }
 ) {
+  // Untuk QMS: extract risk category dari answers
+  const riskCategory: ComplexityLevel | undefined =
+    input.standard === 'QMS'
+      ? (detectQmsRiskCategory((input as any).answers ?? {}) as ComplexityLevel)
+      : undefined;
+
   return {
     standard: input.standard,
     standardName: standardMeta.name,
     fte: input.fte,
     complexity,
+    riskCategory,
     applicationType: input.applicationType,
     calculatedAt: new Date().toISOString(),
     reference: standardMeta.referenceDoc,
   };
 }
+
+

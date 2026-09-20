@@ -1,4 +1,4 @@
-/**
+﻿/**
  * QMS - Quality Management Systems
  *
  * Rujukan:
@@ -32,7 +32,6 @@ export const QMS_METADATA: StandardMetadata = {
 // =============================================================================
 
 export const QMS_MANDAYS_TABLE: MandaysRow[] = [
-  // Blok kiri
   { fteMin: 1,    fteMax: 5,    days: 1.5 },
   { fteMin: 6,    fteMax: 10,   days: 2   },
   { fteMin: 11,   fteMax: 15,   days: 2.5 },
@@ -45,7 +44,6 @@ export const QMS_MANDAYS_TABLE: MandaysRow[] = [
   { fteMin: 176,  fteMax: 275,  days: 9   },
   { fteMin: 276,  fteMax: 425,  days: 10  },
   { fteMin: 426,  fteMax: 625,  days: 11  },
-  // Blok kanan
   { fteMin: 626,  fteMax: 875,  days: 12  },
   { fteMin: 876,  fteMax: 1175, days: 13  },
   { fteMin: 1176, fteMax: 1550, days: 14  },
@@ -102,16 +100,50 @@ export const QMS_RISK_CATEGORIES: SectorEntry[] = [
 // =============================================================================
 
 /**
- * Kira base mandays untuk QMS (TIER 1)
- * QMS tiada complexity - guna placeholder 'HIGH' untuk signature seragam.
+ * Kira base mandays untuk QMS (TIER 1).
+ * QMS tiada complexity untuk mandays — guna 1 lajur (`days`).
+ * Complexity parameter diterima untuk paparan, tapi tidak affect lookup.
  */
-export function getQmsBaseMd(fte: number): BaseMdResult {
+export function getQmsBaseMd(
+  fte: number,
+  complexity?: 'HIGH' | 'MEDIUM' | 'LOW'
+): BaseMdResult {
   return lookupBaseMd(
     QMS_MANDAYS_TABLE,
     fte,
-    'HIGH',
+    complexity ?? 'HIGH',
     { standard: 'QMS', maxFte: QMS_MAX_FTE }
   );
+}
+
+/**
+ * Detect risk category dari answers (untuk auditor competence).
+ * Priority:
+ * 1. Explicit `qms_risk_category` dalam answers
+ * 2. Sector match
+ * 3. Default 'MEDIUM'
+ */
+export function detectQmsRiskCategory(
+  answers: Record<string, unknown>
+): 'HIGH' | 'MEDIUM' | 'LOW' {
+  // 1. Explicit field
+  const explicit = answers['qms_risk_category'];
+  if (
+    typeof explicit === 'string' &&
+    ['HIGH', 'MEDIUM', 'LOW'].includes(explicit.toUpperCase())
+  ) {
+    return explicit.toUpperCase() as 'HIGH' | 'MEDIUM' | 'LOW';
+  }
+
+  // 2. Sector match
+  const sector = answers['sector'] ?? answers['industry_type'];
+  if (typeof sector === 'string' && sector.length > 0) {
+    const result = suggestQmsRiskCategory(sector);
+    if (result) return result.riskCategory;
+  }
+
+  // 3. Default
+  return 'MEDIUM';
 }
 
 /**

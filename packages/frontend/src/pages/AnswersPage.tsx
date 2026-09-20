@@ -79,6 +79,13 @@ export function AnswersPage() {
             includeSites: applicationData.scopeIndustry.includeSites,
             sitesCount: applicationData.scopeIndustry.sitesCount,
           },
+          documentation: {
+            established: applicationData.documentation.established,
+            type: applicationData.documentation.type,
+            manualIntegrated: applicationData.documentation.manualIntegrated,
+            policyIntegrated: applicationData.documentation.policyIntegrated,
+            internalAuditIntegrated: applicationData.documentation.internalAuditIntegrated,
+          },
           certificationType: applicationData.certificationType,
           industryType: applicationData.scopeIndustry.industryType,
         },
@@ -188,5 +195,6 @@ export function AnswersPage() {
     </div>
   );
 }
+
 
 

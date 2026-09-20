@@ -138,6 +138,13 @@ export const api = {
       pic?: { name?: string; designation?: string; phone?: string; email?: string };
       employees?: { total?: number; management?: number; permanent?: number; contract?: number; repetitive?: number };
       scopeIndustry?: { scope?: string; industryType?: string; includeSites?: boolean; sitesCount?: number };
+      documentation?: {
+        established?: boolean;
+        type?: string;
+        manualIntegrated?: boolean;
+        policyIntegrated?: boolean;
+        internalAuditIntegrated?: boolean;
+      };
       certificationType?: 'SINGLE' | 'INTEGRATED';
       industryType?: string;
     };
@@ -145,4 +152,5 @@ export const api = {
     return this.post<ApiCalculationResponse>('/calculations', payload);
   },
 };
+
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared types untuk Formula Engine
  * NIOSHCert Mandays Calculation System
  */
@@ -70,6 +70,8 @@ export interface CalculationInput {
   isIntegrated?: boolean;
   applicationType: ApplicationType;
   complexity?: ComplexityLevel;
+  /** Answers (untuk QMS risk category detection) */
+  answers?: Record<string, unknown>;
   abmsInput?: {
     cpiScore: number;
     sector?: string;
@@ -90,6 +92,7 @@ export interface CalculationResult {
     standardName: string;
     fte: number;
     complexity?: ComplexityLevel;
+    riskCategory?: ComplexityLevel; // QMS: HIGH/MEDIUM/LOW (auditor competence)
     applicationType: ApplicationType;
     calculatedAt: string;
     reference: string;

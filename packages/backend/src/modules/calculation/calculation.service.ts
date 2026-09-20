@@ -20,6 +20,7 @@ export interface StandardCalculation {
   standard: string;
   fte: number;
   complexity: ComplexityLevel | null;
+  riskCategory?: ComplexityLevel | null;
   baseMd: number | null;
   effectiveMd: number | null;
   stage1Md: number | null;
@@ -120,7 +121,8 @@ export class CalculationService {
           code,
           mergedAnswers,
         );
-        complexity = detected.complexity;
+        // Fallback: kalau adapter tak detect, default ke MEDIUM (ATD boleh override)
+        complexity = detected.complexity ?? 'MEDIUM';
       }
 
       standardInputs.push({
@@ -128,6 +130,7 @@ export class CalculationService {
         fte: fteResult.fte,
         applicationType: appType as any,
         complexity: complexity ?? undefined,
+        answers: mergedAnswers, // untuk QMS risk category detection
       });
     }
 
@@ -149,6 +152,7 @@ export class CalculationService {
         standard: item.standard,
         fte: fteResult.fte,
         complexity: (meta.complexity ?? null) as ComplexityLevel | null,
+        riskCategory: (meta.riskCategory ?? null) as ComplexityLevel | null,
         baseMd: r.baseMd,
         effectiveMd: r.effectiveMd,
         stage1Md: r.stage1Md,
@@ -378,6 +382,20 @@ export class CalculationService {
       }
     }
 
+    // Merge documentation (untuk IMS reduction)
+    const doc = dto.application?.documentation;
+    if (doc) {
+      if (doc.manualIntegrated !== undefined) {
+        merged['manual_integrated'] = doc.manualIntegrated;
+      }
+      if (doc.policyIntegrated !== undefined) {
+        merged['policy_integrated'] = doc.policyIntegrated;
+      }
+      if (doc.internalAuditIntegrated !== undefined) {
+        merged['internal_audit_integrated'] = doc.internalAuditIntegrated;
+      }
+    }
+
     return merged;
   }
 
@@ -454,4 +472,8 @@ export class CalculationService {
     return `CALC-${year}-${rand}`;
   }
 }
+
+
+
+
 

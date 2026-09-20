@@ -77,6 +77,28 @@ export class EmployeesDto {
   repetitive?: number;
 }
 
+export class DocumentationDto {
+  @IsOptional()
+  @IsBoolean()
+  established?: boolean;
+
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  manualIntegrated?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  policyIntegrated?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  internalAuditIntegrated?: boolean;
+}
+
 export class ScopeIndustryDto {
   @IsOptional()
   @IsString()
@@ -114,6 +136,11 @@ export class ApplicationInfoDto {
   @ValidateNested()
   @Type(() => ScopeIndustryDto)
   scopeIndustry?: ScopeIndustryDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DocumentationDto)
+  documentation?: DocumentationDto;
 
   @IsOptional()
   @IsIn(['SINGLE', 'INTEGRATED'])
@@ -169,3 +196,4 @@ export class CreateCalculationDto {
   @IsObject()
   complexities?: Record<string, string>;
 }
+
