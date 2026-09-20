@@ -1,7 +1,6 @@
-import { useApplicationStore } from '@/lib/applicationStore';
+﻿import { useApplicationStore } from '@/lib/applicationStore';
 import { FormInput } from '@/components/forms/FormInput';
 import { FormTextarea } from '@/components/forms/FormTextarea';
-import { FormNumber } from '@/components/forms/FormNumber';
 import { FormSelect } from '@/components/forms/FormSelect';
 
 export function Step7Documentation() {
@@ -218,3 +217,4 @@ export function Step7Documentation() {
     </div>
   );
 }
+

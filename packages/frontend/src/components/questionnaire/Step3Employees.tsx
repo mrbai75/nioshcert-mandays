@@ -1,11 +1,16 @@
-import { useApplicationStore, calculateTotalFte } from '@/lib/applicationStore';
+﻿import { useApplicationStore } from '@/lib/applicationStore';
 import { FormNumber } from '@/components/forms/FormNumber';
 
 export function Step3Employees() {
   const employees = useApplicationStore((s) => s.data.employees);
   const updateEmployees = useApplicationStore((s) => s.updateEmployees);
 
-  const totalFte = calculateTotalFte(employees);
+  // Auto-kira total dari breakdown
+  const autoTotal =
+    (employees.management ?? 0) +
+    (employees.permanent ?? 0) +
+    (employees.contract ?? 0) +
+    (employees.repetitive ?? 0);
 
   return (
     <div className="space-y-4">
@@ -18,15 +23,7 @@ export function Step3Employees() {
         </p>
       </div>
 
-      <FormNumber
-        label="Total Number of Employees"
-        value={employees.total}
-        onChange={(v) => updateEmployees({ total: v })}
-        min={1}
-        required
-        helpText="Overall headcount of the organisation"
-      />
-
+      {/* Breakdown dulu */}
       <div className="grid grid-cols-2 gap-4">
         <FormNumber
           label="Management"
@@ -56,6 +53,21 @@ export function Step3Employees() {
           required
           helpText="Simple, repetitive tasks — e.g. cleaners, security, transport, sales, call centre"
         />
+      </div>
+
+      {/* Total auto-kira, papar bawah */}
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-blue-900">
+              Total Number of Employees
+            </p>
+            <p className="text-xs text-blue-700 mt-0.5">
+              Auto-calculated from categories above
+            </p>
+          </div>
+          <p className="text-2xl font-bold text-blue-900">{autoTotal}</p>
+        </div>
       </div>
     </div>
   );

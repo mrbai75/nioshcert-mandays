@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+﻿import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { HealthPage } from '@/pages/HealthPage';
@@ -6,6 +6,7 @@ import { QuestionnairePage } from '@/pages/QuestionnairePage';
 import { AnswersPage } from '@/pages/AnswersPage';
 import { ReviewPage } from '@/pages/ReviewPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { ResultPage } from '@/pages/ResultPage';
 
 export function AppRouter() {
   return (
@@ -17,9 +18,11 @@ export function AppRouter() {
           <Route path="/questionnaire/new" element={<QuestionnairePage />} />
           <Route path="/questionnaire/answers" element={<AnswersPage />} />
           <Route path="/review" element={<ReviewPage />} />
+          <Route path="/result" element={<ResultPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
+

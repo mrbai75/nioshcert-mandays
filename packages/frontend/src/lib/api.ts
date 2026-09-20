@@ -1,4 +1,4 @@
-// API client — wrapper fetch untuk backend NestJS
+﻿// API client â€” wrapper fetch untuk backend NestJS
 // Base URL: proxy /api -> http://localhost:3001 (lihat vite.config.ts)
 
 export interface ApiError {
@@ -44,6 +44,65 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+// =============================================================================
+// TYPES — Calculation
+// =============================================================================
+
+export interface StandardCalculation {
+  standard: string;
+  fte: number;
+  complexity: string | null;
+  baseMd: number | null;
+  effectiveMd: number | null;
+  stage1Md: number | null;
+  stage2Md: number | null;
+  surveillanceMd: number | null;
+  recertMd: number | null;
+  requiresManualInput: boolean;
+  trace: unknown[];
+  meta: unknown;
+}
+
+export interface ImsReductionInfo {
+  applied: boolean;
+  suggestedReduction: number;
+  actualReduction: number;
+  source: 'AUTO' | 'OVERRIDE';
+  breakdown: {
+    manualIntegrated: boolean;
+    policyIntegrated: boolean;
+    internalAuditIntegrated: boolean;
+    score: number;
+    maxScore: number;
+  };
+  rawTotalMd: number;
+  finalTotalMd: number;
+  reductionMinMd: number;
+  reductionMaxMd: number;
+}
+
+export interface CalculationResponse {
+  applicationId: string | null;
+  calculationIds: string[];
+  referenceNo: string | null;
+  fte: number;
+  fteFormula: string;
+  standards: StandardCalculation[];
+  totalEffectiveMd: number;
+  applicationType: string;
+  isIms: boolean;
+  ims?: ImsReductionInfo;
+}
+
+export interface ApiCalculationResponse {
+  success: boolean;
+  data: CalculationResponse;
+}
+
+// =============================================================================
+// API
+// =============================================================================
+
 export const api = {
   async get<T>(path: string): Promise<T> {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -61,4 +120,29 @@ export const api = {
     });
     return handleResponse<T>(response);
   },
+
+  /**
+   * Kira mandays + save ke DB (kalau ada application).
+   *
+   * POST /api/calculations
+   */
+  async calculateMandays(payload: {
+    standards: string[];
+    answers: Record<string, unknown>;
+    applicationType?: 'NEW' | 'SURVEILLANCE' | 'RECERT';
+    complexityOverride?: string;
+    complexities?: Record<string, string>;
+    imsReduction?: number;
+    application?: {
+      company: { name: string; address?: string; legalStatus?: string; orgType?: string; isBumiputera?: boolean };
+      pic?: { name?: string; designation?: string; phone?: string; email?: string };
+      employees?: { total?: number; management?: number; permanent?: number; contract?: number; repetitive?: number };
+      scopeIndustry?: { scope?: string; industryType?: string; includeSites?: boolean; sitesCount?: number };
+      certificationType?: 'SINGLE' | 'INTEGRATED';
+      industryType?: string;
+    };
+  }): Promise<ApiCalculationResponse> {
+    return this.post<ApiCalculationResponse>('/calculations', payload);
+  },
 };
+

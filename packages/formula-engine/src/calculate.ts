@@ -1,8 +1,8 @@
-/**
+﻿/**
  * ORCHESTRATOR - Main calculate function
  *
  * Gabungkan TIER 1 + TIER 2 + TIER 3 + Stage Split.
- * Handle semua standard: OSHMS, QMS, EMS, ABMS.
+ * Handle semua standard: OSHMS, QMS, EMS, ABMS, ISMS.
  *
  * Prinsip: "Sistem cadang, manusia putus, sistem rekod."
  */
@@ -24,6 +24,7 @@ import {
   determineAbmsComplexity,
   ABMS_METADATA,
 } from './standards/abms';
+import { getIsmsBaseMd, ISMS_METADATA } from './standards/isms';
 
 export function calculate(input: CalculationInput): CalculationResult {
   const trace: TraceStep[] = [];
@@ -152,7 +153,7 @@ function getBaseMd(
     case 'ABMS':
       return getAbmsBaseMd(fte, complexity as 'HIGH' | 'MEDIUM' | 'LOW');
     case 'ISMS':
-      throw new Error('ISMS belum diimplementasikan. Skip dulu.');
+      return getIsmsBaseMd(fte);
     default:
       throw new Error(`Standard "${standard}" tidak dikenali.`);
   }
@@ -169,7 +170,7 @@ function getStandardMetadata(standard: string) {
     case 'ABMS':
       return ABMS_METADATA;
     case 'ISMS':
-      throw new Error('ISMS belum diimplementasikan. Skip dulu.');
+      return ISMS_METADATA;
     default:
       throw new Error(`Metadata untuk "${standard}" tidak dijumpai.`);
   }

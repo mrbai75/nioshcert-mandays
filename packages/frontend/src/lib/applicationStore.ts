@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 // =============================================================================
@@ -172,12 +172,21 @@ export const useApplicationStore = create<ApplicationStore>()(
         })),
 
       updateEmployees: (employees) =>
-        set((state) => ({
-          data: {
-            ...state.data,
-            employees: { ...state.data.employees, ...employees },
-          },
-        })),
+        set((state) => {
+          const merged = { ...state.data.employees, ...employees };
+          // Auto-sync total
+          const autoTotal =
+            (merged.management ?? 0) +
+            (merged.permanent ?? 0) +
+            (merged.contract ?? 0) +
+            (merged.repetitive ?? 0);
+          return {
+            data: {
+              ...state.data,
+              employees: { ...merged, total: autoTotal },
+            },
+          };
+        }),
 
       updateShift: (shift) =>
         set((state) => ({
@@ -264,3 +273,4 @@ export function calculateShiftTotal(shift: ShiftOutsource): number {
   if (!shift.hasShift) return 0;
   return shift.shift1 + shift.shift2 + shift.shift3;
 }
+

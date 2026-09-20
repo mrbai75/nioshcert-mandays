@@ -1,28 +1,109 @@
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApplicationStore } from '@/lib/applicationStore';
 import { useQuestionnaireStore } from '@/lib/questionnaireStore';
 import { useQuestionnaire } from '@/hooks/useQuestionnaire';
 import { SectionWizard } from '@/components/questionnaire/SectionWizard';
+import { api, ApiClientError } from '@/lib/api';
 
 export function AnswersPage() {
   const navigate = useNavigate();
   const standards = useApplicationStore((s) => s.data.standards);
+  const applicationData = useApplicationStore((s) => s.data);
   const answers = useQuestionnaireStore((s) => s.answers);
   const resetQuestionnaire = useQuestionnaireStore((s) => s.reset);
   const resetApplication = useApplicationStore((s) => s.reset);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const { data: sections, isLoading, isError } = useQuestionnaire(standards);
 
-  const handleComplete = () => {
-    // TODO Fasa 8.6: hantar ke POST /api/calculations
-    console.log('Questionnaire answers:', answers);
-    alert('Submit questionnaire — akan diimplement dalam Fasa 8.6');
+  const handleComplete = async () => {
+    // Validate employees dulu (elak FTE = 0)
+    const emp = applicationData.employees;
+    const totalEmployees =
+      (emp.management ?? 0) +
+      (emp.permanent ?? 0) +
+      (emp.contract ?? 0) +
+      (emp.repetitive ?? 0);
 
-    // Reset semua state — elak data lama muncul bila New Application
-    resetQuestionnaire();
-    resetApplication();
+    if (totalEmployees === 0) {
+      setSubmitError(
+        'Sila isi maklumat pekerja (Step 3: Number of Employees) terlebih dahulu.',
+      );
+      return;
+    }
 
-    navigate('/');
+    // Validate company name
+    if (!applicationData.company.name || applicationData.company.name.trim() === '') {
+      setSubmitError(
+        'Sila isi nama syarikat (Step 1: Company Information) terlebih dahulu.',
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // Hantar ke backend
+      const response = await api.calculateMandays({
+        standards,
+        answers,
+        applicationType: 'NEW',
+        application: {
+          company: {
+            name: applicationData.company.name,
+            address: applicationData.company.address,
+            legalStatus: applicationData.company.legalStatus,
+            orgType: applicationData.company.orgType,
+            isBumiputera: applicationData.company.isBumiputera,
+          },
+          pic: {
+            name: applicationData.pic.name,
+            designation: applicationData.pic.designation,
+            phone: applicationData.pic.phone,
+            email: applicationData.pic.email,
+          },
+          employees: {
+            total: applicationData.employees.total,
+            management: applicationData.employees.management,
+            permanent: applicationData.employees.permanent,
+            contract: applicationData.employees.contract,
+            repetitive: applicationData.employees.repetitive,
+          },
+          scopeIndustry: {
+            scope: applicationData.scopeIndustry.scope,
+            industryType: applicationData.scopeIndustry.industryType,
+            includeSites: applicationData.scopeIndustry.includeSites,
+            sitesCount: applicationData.scopeIndustry.sitesCount,
+          },
+          certificationType: applicationData.certificationType,
+          industryType: applicationData.scopeIndustry.industryType,
+        },
+      });
+
+      // Simpan result ke sessionStorage
+      sessionStorage.setItem(
+        'scale-last-result',
+        JSON.stringify(response.data),
+      );
+
+      // Reset state
+      resetQuestionnaire();
+      resetApplication();
+
+      // Navigate ke result page
+      navigate('/result');
+    } catch (err) {
+      const message =
+        err instanceof ApiClientError
+          ? err.message
+          : 'Failed to submit questionnaire. Please try again.';
+      setSubmitError(message);
+      setIsSubmitting(false);
+    }
   };
 
   if (standards.length === 0) {
@@ -82,5 +163,30 @@ export function AnswersPage() {
     );
   }
 
-  return <SectionWizard sections={sections} onComplete={handleComplete} />;
+  return (
+    <div className="space-y-4">
+      {submitError && (
+        <div className="max-w-3xl bg-red-50 border border-red-200 rounded p-4">
+          <p className="text-sm text-red-800 font-medium">
+            ❌ {submitError}
+          </p>
+        </div>
+      )}
+
+      {isSubmitting && (
+        <div className="max-w-3xl bg-blue-50 border border-blue-200 rounded p-4">
+          <p className="text-sm text-blue-800 font-medium">
+            ⏳ Submitting questionnaire... Please wait.
+          </p>
+        </div>
+      )}
+
+      <SectionWizard
+        sections={sections}
+        onComplete={handleComplete}
+      />
+    </div>
+  );
 }
+
+

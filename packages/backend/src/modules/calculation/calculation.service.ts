@@ -105,10 +105,13 @@ export class CalculationService {
       let complexity: ComplexityLevel | null = null;
 
       // Priority:
+      // 0. ISMS — skip complexity (guna 1 lajur sahaja)
       // 1. complexities map (per standard)
       // 2. complexityOverride (single standard sahaja)
       // 3. Auto-detect dari answers
-      if (dto.complexities && dto.complexities[code]) {
+      if (code === 'ISMS') {
+        complexity = null; // ISMS tak guna complexity
+      } else if (dto.complexities && dto.complexities[code]) {
         complexity = dto.complexities[code].toUpperCase() as ComplexityLevel;
       } else if (dto.complexityOverride && code === codes[0]) {
         complexity = dto.complexityOverride.toUpperCase() as ComplexityLevel;
@@ -451,3 +454,4 @@ export class CalculationService {
     return `CALC-${year}-${rand}`;
   }
 }
+
