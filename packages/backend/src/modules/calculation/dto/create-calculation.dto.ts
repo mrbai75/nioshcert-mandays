@@ -1,6 +1,133 @@
-import { IsArray, IsObject, IsString, IsOptional, IsIn, IsNumber, Min, Max } from 'class-validator';
+﻿import {
+  IsArray,
+  IsObject,
+  IsString,
+  IsOptional,
+  IsIn,
+  IsNumber,
+  IsBoolean,
+  Min,
+  Max,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-// Body untuk create calculation
+// =============================================================================
+// NESTED DTOs â€” Client + Application info dari frontend
+// =============================================================================
+
+export class CompanyInfoDto {
+  @IsString()
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  legalStatus?: string;
+
+  @IsOptional()
+  @IsString()
+  orgType?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isBumiputera?: boolean;
+}
+
+export class PicContactDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  designation?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
+}
+
+export class EmployeesDto {
+  @IsOptional()
+  @IsNumber()
+  total?: number;
+
+  @IsOptional()
+  @IsNumber()
+  management?: number;
+
+  @IsOptional()
+  @IsNumber()
+  permanent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  contract?: number;
+
+  @IsOptional()
+  @IsNumber()
+  repetitive?: number;
+}
+
+export class ScopeIndustryDto {
+  @IsOptional()
+  @IsString()
+  scope?: string;
+
+  @IsOptional()
+  @IsString()
+  industryType?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  includeSites?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  sitesCount?: number;
+}
+
+export class ApplicationInfoDto {
+  @ValidateNested()
+  @Type(() => CompanyInfoDto)
+  company!: CompanyInfoDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PicContactDto)
+  pic?: PicContactDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => EmployeesDto)
+  employees?: EmployeesDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ScopeIndustryDto)
+  scopeIndustry?: ScopeIndustryDto;
+
+  @IsOptional()
+  @IsIn(['SINGLE', 'INTEGRATED'])
+  certificationType?: 'SINGLE' | 'INTEGRATED';
+
+  @IsOptional()
+  @IsString()
+  industryType?: string;
+}
+
+// =============================================================================
+// MAIN DTO
+// =============================================================================
+
 export class CreateCalculationDto {
   @IsArray()
   @IsString({ each: true })
@@ -12,6 +139,12 @@ export class CreateCalculationDto {
   @IsOptional()
   @IsIn(['NEW', 'SURVEILLANCE', 'RECERT'])
   applicationType?: 'NEW' | 'SURVEILLANCE' | 'RECERT';
+
+  /** Optional â€” kalau ada, calculate sahaja (tak save). Kalau ada, save ke DB. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ApplicationInfoDto)
+  application?: ApplicationInfoDto;
 
   @IsOptional()
   @IsString()
@@ -29,5 +162,10 @@ export class CreateCalculationDto {
   @IsNumber()
   @Min(0)
   @Max(1)
-  imsReduction?: number; // 0.0 - 0.20 (ATD override untuk IMS)
+  imsReduction?: number;
+
+  /** Complexity per standard (map) — cth: { OSHMS: 'MEDIUM', EMS: 'HIGH' } */
+  @IsOptional()
+  @IsObject()
+  complexities?: Record<string, string>;
 }
